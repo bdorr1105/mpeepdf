@@ -25,30 +25,29 @@
     This module contains some functions to analyse Javascript code inside the PDF file
 '''
 
-import jsbeautifier
-import os
-import re
-import sys
-import traceback
+import sys, re, os, jsbeautifier, traceback, operator
 import xml.dom.minidom
 import subprocess
 from subprocess import PIPE
 import random
 import string
-from PDFUtils import unescapeHTMLEntities, escapeString
+from PDFUtils import unescapeHTMLEntities, escapeString, average, stddev
+from collections import Counter
+from PDFConstants import *
+from math import log
 
 try:
     import PyV8
-    
+
     JS_MODULE = True
-    
+
     class Global(PyV8.JSClass):
         evalCode = ''
-        
+
         def evalOverride(self, expression):
             self.evalCode += '\n\n// New evaluated code\n' + expression
             return
-        
+
 except:
     JS_MODULE = False
 
@@ -242,6 +241,57 @@ def JSUnpack(code, rawCode=None, infoObjects=None, annotsInPagesMaster='[]', ann
 
     return valuesFoundByViewerVersion
 
+def getObfuscationScore(jsCode):
+    '''
+        Given the Javascript code this method tries to detect JS Obfuscation using frequency analysis, Entropy and Word size.
+
+        @param jsCode: The Javascript code (string)
+        @return: Score(maximum: 10) of obfuscation in Javascript
+    '''
+    # Frequency Analysis ++++++++++++++++++++++++
+    jsCode = jsCode.strip()
+    obfuscationScore = 0
+    charFreq = Counter(jsCode)
+    totalChars = len(charFreq.keys())
+    sortedCharFreq = sorted(charFreq.items(), key=operator.itemgetter(1), reverse=True)
+    sortedCharFreq = [item[0] for item in sortedCharFreq]
+    sortedFreq = sorted(charFreq.values(), reverse=True)
+    mean = average(sortedFreq[:20])
+    maxDeviation = 0.20 * mean
+    deviation = stddev(sortedFreq[:20]) - mean
+    if deviation > maxDeviation:
+        obfuscationScore += 3
+    suspiciousChars = [('%', 10), ('\\', 10), ('x', 10), ('+', 10), ('"', 5)]
+    morePopular = [' ', '\n', '\t', '(', ')', '.', 'e', 't', 'a', 'o', 'i', 'n', '\r', '-', ';']
+    suspiciousCharsPopular = False
+    for ch in suspiciousChars:
+        if ch[0] in sortedCharFreq[:ch[1]]:
+            suspiciousCharsPopular = True
+            break
+    if suspiciousCharsPopular:
+        obfuscationScore += 3
+    if float(charFreq[sortedCharFreq[:5][0]])/float(len(jsCode)) > 0.33:
+        obfuscationScore += 3
+    for ch in sortedCharFreq[:5]:
+        if ch not in morePopular:
+            obfuscationScore += 2
+            break
+    # Entropy Analysis ++++++++++++++++++++++++++++++++++++++++
+    entropy = 0
+    for ch in charFreq:
+        entropy += (float(charFreq[ch]) / len(jsCode)) * log(float(charFreq[ch]) / len(jsCode))
+    entropy *= -1
+    if entropy <= 3.3:
+        obfuscationScore += 2
+    # Word Size Analysis ++++++++++++++++++++++++++++++++++++++++
+    words = jsCode.split()
+    for word in words:
+        if len(word) > 350:
+            obfuscationScore += 3
+    if obfuscationScore > 10:
+        obfuscationScore = 10
+    return obfuscationScore
+    
 def evalJS(code):
     """
     @param code: the Javascript code
@@ -276,7 +326,7 @@ def randomString(stringLength=10):
 def analyseJS(code, context=None, manualAnalysis=False):
     '''
         Hooks the eval function and search for obfuscated elements in the Javascript code
-        
+
         @param code: The Javascript code (string)
         @return: List with analysis information of the Javascript code: [JSCode,unescapedBytes,urlsFound,errors,context], where 
                 JSCode is a list with the several stages Javascript code,
@@ -289,7 +339,7 @@ def analyseJS(code, context=None, manualAnalysis=False):
     jsCode = []
     unescapedBytes = []
     urlsFound = []
-    
+
     try:
         code = unescapeHTMLEntities(code)
         scriptElements = re.findall(reJSscript, code, re.DOTALL | re.IGNORECASE)
@@ -306,7 +356,7 @@ def analyseJS(code, context=None, manualAnalysis=False):
             context.enter()
             # Hooking the eval function
             context.eval('eval=evalOverride')
-            #context.eval(preDefinedCode)
+            # context.eval(preDefinedCode)
             while True:
                 originalCode = code
                 try:
@@ -323,7 +373,7 @@ def analyseJS(code, context=None, manualAnalysis=False):
                     open('jserror.log', 'ab').write(error + newLine)
                     errors.append(error)
                     break
-            
+
             if code != '':
                 escapedVars = re.findall('(\w*?)\s*?=\s*?(unescape\((.*?)\))', code, re.DOTALL)
                 for var in escapedVars:
@@ -336,10 +386,10 @@ def analyseJS(code, context=None, manualAnalysis=False):
                                 bytes = ret[1]
                                 urls = re.findall('https?://.*$', bytes, re.DOTALL)
                                 if bytes not in unescapedBytes:
-                                   unescapedBytes.append(bytes)
+                                    unescapedBytes.append(bytes)
                                 for url in urls:
-                                   if url not in urlsFound:
-                                       urlsFound.append(url)
+                                    if url not in urlsFound:
+                                        urlsFound.append(url)
                     else:
                         bytes = bytes[1:-1]
                         if len(bytes) > 150:
@@ -348,10 +398,10 @@ def analyseJS(code, context=None, manualAnalysis=False):
                                 bytes = ret[1]
                                 urls = re.findall('https?://.*$', bytes, re.DOTALL)
                                 if bytes not in unescapedBytes:
-                                   unescapedBytes.append(bytes)
+                                    unescapedBytes.append(bytes)
                                 for url in urls:
-                                   if url not in urlsFound:
-                                       urlsFound.append(url)
+                                    if url not in urlsFound:
+                                        urlsFound.append(url)
     except:
         traceback.print_exc(file=open(errorsFile, 'a'))
         errors.append('Unexpected error in the JSAnalysis module!!')
@@ -365,7 +415,7 @@ def analyseJS(code, context=None, manualAnalysis=False):
 def getVarContent(jsCode, varContent):
     '''
         Given the Javascript code and the content of a variable this method tries to obtain the real value of the variable, cleaning expressions like "a = eval; a(js_code);"
-        
+
         @param jsCode: The Javascript code (string)
         @param varContent: The content of the variable (string)
         @return: A string with real value of the variable
@@ -390,7 +440,7 @@ def getVarContent(jsCode, varContent):
 def isJavascript(content):
     '''
         Given an string this method looks for typical Javscript strings and try to identify if the string contains Javascrit code or not.
-        
+
         @param content: A string
         @return: A boolean, True if it seems to contain Javascript code or False in the other case
     '''
@@ -408,7 +458,7 @@ def isJavascript(content):
 
     if re.findall(reJSscript, content, re.DOTALL | re.IGNORECASE):
         return True
-    
+
     for char in content:
         if (ord(char) < 32 and char not in ['\n', '\r', '\t', '\f', '\x00']) or ord(char) >= 127:
             return False
@@ -433,7 +483,7 @@ def isJavascript(content):
 def searchObfuscatedFunctions(jsCode, function):
     '''
         Search for obfuscated functions in the Javascript code
-        
+
         @param jsCode: The Javascript code (string)
         @param function: The function name to look for (string)
         @return: List with obfuscated functions information [functionName,functionCall,containsReturns] 
@@ -449,19 +499,19 @@ def searchObfuscatedFunctions(jsCode, function):
                  obfuscatedFunctionsInfo.append([function, m, False])
         obfuscatedFunctions = re.findall('\s*?((\w*?)\s*?=\s*?'+function+')\s*?;', jsCode, re.DOTALL)
         for obfuscatedFunction in obfuscatedFunctions:
-           obfuscatedElement = obfuscatedFunction[1]
-           obfuscatedFunctionsInfo += searchObfuscatedFunctions(jsCode, obfuscatedElement)
+            obfuscatedElement = obfuscatedFunction[1]
+            obfuscatedFunctionsInfo += searchObfuscatedFunctions(jsCode, obfuscatedElement)
     return obfuscatedFunctionsInfo
 
 
 def unescape(escapedBytes, unicode = True):
     '''
         This method unescapes the given string
-        
+
         @param escapedBytes: A string to unescape
         @return: A tuple (status,statusContent), where statusContent is an unescaped string in case status = 0 or an error in case status = -1
     '''
-    #TODO: modify to accept a list of escaped strings?
+    # TODO: modify to accept a list of escaped strings?
     unescapedBytes = ''
     if unicode:
         unicodePadding = '\x00'
@@ -480,12 +530,12 @@ def unescape(escapedBytes, unicode = True):
                 if len(splitByte) > 4 and re.match('u[0-9a-f]{4}', splitByte[:5], re.IGNORECASE):
                     unescapedBytes += chr(int(splitByte[3]+splitByte[4], 16))+chr(int(splitByte[1]+splitByte[2],16))
                     if len(splitByte) > 5:
-                        for j in range(5,len(splitByte)): 
+                        for j in range(5, len(splitByte)):
                             unescapedBytes += splitByte[j] + unicodePadding
                 elif len(splitByte) > 1 and re.match('[0-9a-f]{2}', splitByte[:2], re.IGNORECASE):
                     unescapedBytes += chr(int(splitByte[0]+splitByte[1], 16)) + unicodePadding
                     if len(splitByte) > 2:
-                        for j in range(2,len(splitByte)): 
+                        for j in range(2, len(splitByte)):
                             unescapedBytes += splitByte[j] + unicodePadding
                 else:
                     if i != 0:
@@ -497,24 +547,3 @@ def unescape(escapedBytes, unicode = True):
     except:
         return (-1, 'Error while unescaping the bytes')
     return (0, unescapedBytes)
-
-
-if __name__ == "__main__":
-    from PDFCore import *
-    from JSAnalysis import *
-    #create object pdf
-    from PDFCore import *
-
-    fileName="/home/thole/Documents/samples/pdf_samples/AAAA/sample3/ffe8db8803d5ead7a7c4d4dfd393e4601a91b867"
-    pdfParser = PDFParser()
-    ret, pdf = pdfParser.parse(fileName, True,True,False)
-    infoObjects=pdf.getInfoObject()
-
-    rawCode=pdf.getObject(1)
-    code=rawCode.getJSCode()[0]
-    if rawCode.getType() == "stream":
-            rawCode=rawCode.getStream()
-    else:
-            rawCode=rawCode.getValue()
-
-    print JSUnpack(code,rawCode,infoObjects)

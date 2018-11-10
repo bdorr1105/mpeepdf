@@ -38,6 +38,7 @@ from PDFUtils import *
 from PDFCrypto import *
 from JSAnalysis import *
 from PDFCore import *
+from PDFConstants import *
 from base64 import b64encode, b64decode
 from PDFFilters import decodeStream, encodeStream
 from jjdecode import JJDecoder
@@ -94,6 +95,7 @@ monitorizedElements = ['/EmbeddedFiles',
                        'keep.previous']
 monitoring=monitorizedActions + monitorizedElements + monitorizedEvents
 class PDFConsole(cmd.Cmd):
+
     '''
         Class of the peepdf interactive console. To see details about commands: http://code.google.com/p/peepdf/wiki/Commands
     '''
@@ -145,6 +147,12 @@ class PDFConsole(cmd.Cmd):
         self.jsonOutput = jsonOutput
         self.outputVarName = None
         self.outputFileName = None
+
+    def cmdloop(self):
+        try:
+            cmd.Cmd.cmdloop(self)
+        except KeyboardInterrupt as e:
+            self.postloop()
 
     def emptyline(self):
         return
@@ -1438,6 +1446,8 @@ class PDFConsole(cmd.Cmd):
             stats += beforeStaticLabel + 'SHA1: ' + self.resetColor + statsDict['SHA1'] + newLine
             #stats += beforeStaticLabel + 'SHA256: ' + self.resetColor + statsDict['SHA256'] + newLine
             stats += beforeStaticLabel + 'Size: ' + self.resetColor + statsDict['Size'] + ' bytes' + newLine
+            pagesCount = statsDict['Pages Number']
+            stats += beforeStaticLabel + 'Pages Number: ' + self.resetColor + str(pagesCount) + newLine
             if statsDict['Detection'] != []:
                 detectionReportInfo = ''
                 if statsDict['Detection'] is not None:
@@ -1467,12 +1477,22 @@ class PDFConsole(cmd.Cmd):
                     stats += algorithmInfo[0] + ' ' + str(algorithmInfo[1]) + ' bits, '
                 stats = stats[:-2] + ')'
             stats += newLine
+            scoreColor = ''
+            if not self.avoidOutputColors:
+                if self.pdfFile.score >= 7:
+                    scoreColor = self.alertColor
+                elif self.pdfFile.score > 4 and self.pdfFile.score < 7:
+                    scoreColor = self.warningColor
+                else:
+                    scoreColor = self.resetColor
+            score = '%s%.1f%s/%d' % (scoreColor, self.pdfFile.score, self.resetColor, 10)
             stats += beforeStaticLabel + 'Updates: ' + self.resetColor + statsDict['Updates'] + newLine
             stats += beforeStaticLabel + 'Objects: ' + self.resetColor + statsDict['Objects'] + newLine
             stats += beforeStaticLabel + 'Streams: ' + self.resetColor + statsDict['Streams'] + newLine
             stats += beforeStaticLabel + 'URIs: ' + self.resetColor + statsDict['URIs'] + newLine
             stats += beforeStaticLabel + 'Comments: ' + self.resetColor + statsDict['Comments'] + newLine
             stats += beforeStaticLabel + 'Errors: ' + self.resetColor + str(len(statsDict['Errors'])) + newLine * 2
+            stats += beforeStaticLabel + 'Maliciousness Score: ' + scoreColor + str(score) + self.resetColor + newLine
             for version in range(len(statsDict['Versions'])):
                 statsVersion = statsDict['Versions'][version]
                 stats += beforeStaticLabel + 'Version ' + self.resetColor + str(version) + ':' + newLine
@@ -1523,7 +1543,9 @@ class PDFConsole(cmd.Cmd):
                 events = statsVersion['Events']
                 vulns = statsVersion['Vulns']
                 elements = statsVersion['Elements']
-                if events is not None or actions is not None or vulns is not None or elements is not None:
+                properties = statsVersion['Properties']
+                indicators = statsVersion['Indicators']
+                if events != None or actions != None or vulns != None or elements != None:
                     stats += newLine + beforeStaticLabel + '\tSuspicious elements:' + self.resetColor + newLine
                     if events is not None:
                         for event in events:
@@ -1556,8 +1578,15 @@ class PDFConsole(cmd.Cmd):
                                     stats += vulnCVE + ','
                                 stats = stats[:-1] + '): ' + self.resetColor + str(elements[element]) + newLine
                             else:
-                                stats += '\t\t' + beforeStaticLabel + element + ': ' + self.resetColor + str(
-                                    elements[element]) + newLine
+                                stats += '\t\t' + beforeStaticLabel + element + ': ' + self.resetColor + str(elements[element]) + newLine
+                if indicators is not None:
+                    stats += newLine + beforeStaticLabel + '\tSuspicious Indicators:' + self.resetColor + newLine
+                    for indicator in indicators:
+                        stats += '\t\t' + beforeStaticLabel + indicator + ': ' + self.resetColor + str(indicators[indicator]) + newLine
+                if properties != None:
+                    stats += newLine + beforeStaticLabel + '\tSuspicious Properties:' + self.resetColor + newLine
+                    for prop in properties:
+                        stats += '\t\t' + beforeStaticLabel + prop + newLine
                 if not self.avoidOutputColors:
                     beforeStaticLabel = self.staticColor
                 urls = statsVersion['URLs']
@@ -3407,6 +3436,47 @@ class PDFConsole(cmd.Cmd):
         print newLine + 'Usage: save_version $version $file_name'
         print newLine + 'Saves the selected file version to disk' + newLine
 
+    def do_score(self, argv):
+        if self.pdfFile == None:
+            message = '*** Error: You must open a file!!'
+            self.log_output('score ' + argv, message)
+            return False
+        args = self.parseArgs(argv)
+        numArgs = len(args)
+        if numArgs != 0:
+            self.help_score()
+            return False
+        self.pdfFile.calculateScore()
+        if not self.avoidOutputColors:
+            highlightColor = self.warningColor
+        else:
+            highlightColor = ''
+        scoringCard = self.pdfFile.scoringCard
+        max_length = 0
+        print '='*48
+        print highlightColor + '[+] Indicator Scores' + self.resetColor
+        print '-'*48
+        for score in scoringCard:
+            text = '[-] %s: %0.1f' % (score[0].ljust(35, '.'), score[1])
+            if len(text) > max_length:
+                max_length = len(text)
+            print text
+        print '-' * 48
+        print '[-] %s: %0.1f' % ('Total calculated'.ljust(35, '.'), self.pdfFile.rawScore)
+        print '[-] %s: %0.1f' % ('Threshold calculated'.ljust(35, '.'), self.pdfFile.thresholdScore)
+        print '[-] %s: %s%0.1f/10%s' % ('Overall Maliciousness Score'.ljust(35, '.'), highlightColor,self.pdfFile.score, self.resetColor)
+        print '=' * 48
+        if self.pdfFile.score >= 7:
+            warningMessageColor = self.errorColor if not self.avoidOutputColors else ''
+            print warningMessageColor + "[!] HIGH probability of being malicious" + self.resetColor
+        elif self.pdfFile.score >= 4:
+            warningMessageColor = self.warningColor if not self.avoidOutputColors else ''
+            print warningMessageColor + "[!] MEDIUM probability of being malicious" + self.resetColor
+
+    def help_score(self):
+        print newLine + 'Usage: score'
+        print newLine + 'Shows the maliciousness score of the file' + newLine
+
     def do_sctest(self, argv):
         if not EMU_MODULE:
             message = '*** Error: pylibemu is not installed!!'
@@ -3724,7 +3794,6 @@ class PDFConsole(cmd.Cmd):
     def help_stream(self):
         print newLine + 'Usage: stream $object_id [$version]'
         print newLine + 'Shows the object stream content of the specified version after being decoded and decrypted (if necessary)' + newLine
-
 
     def do_tree(self, argv):
         if self.pdfFile is None:
@@ -4250,7 +4319,7 @@ class PDFConsole(cmd.Cmd):
     def additionRequest(self, dict=False):
         '''
             Method to ask the user if he wants to add more entries to the object or not
-            
+
             @param dict: Boolean to specify if the added object is a dictionary or not. Default value: False.
             @return: The response chosen by the user
         '''
@@ -4267,7 +4336,7 @@ class PDFConsole(cmd.Cmd):
     def addObject(self, iteration, maxDepth=10):
         '''
             Method to add a new object to an array or dictionary
-            
+
             @param iteration: Integer which specifies the depth of the recursion in the same object
             @param maxDepth: The maximum depth for nested objects. Default value: 10.
             @return: The new object
@@ -4349,7 +4418,7 @@ class PDFConsole(cmd.Cmd):
     def checkInputContent(self, objectType, objectContent):
         '''
             Check if the specified content is valid for the specified object type and modify it\'s possible
-            
+
             @param objectType: The type of object: number, string, hexstring, name, reference, null
             @param objectContent: The object content
             @return: The content of the object or None if any problems occur
@@ -4411,7 +4480,7 @@ class PDFConsole(cmd.Cmd):
     def log_output(self, command, output, bytesToSave=None, printOutput=True, bytesOutput=False):
         '''
             Method to check the commands output and write it to the console and/or files / variables
-            
+
             @param command: The command launched
             @param output: The output of the command
             @param bytesToSave: A list with the raw bytes which will be stored in a file or variable if a redirection has been set (>,>>,$>,$>>).
@@ -4480,7 +4549,7 @@ class PDFConsole(cmd.Cmd):
     def modifyObject(self, object, iteration=0, contentFile=None, maxDepth=10):
         '''
             Method to modify an existent object
-            
+
             @param object: The object to be modified
             @param iteration: Integer which specifies the depth of the recursion in the same object
             @param contentFile: The content of the file storing the stream
@@ -4607,7 +4676,7 @@ class PDFConsole(cmd.Cmd):
     def modifyRequest(self, value, rawValue, key=None, stream=False):
         '''
             Method to ask the user what he wants to do with the object: modify, delete or nothing.
-            
+
             @param value: The value of the object.
             @param rawValue: The raw value of the object.
             @param key: The key of a dictionary entry.
@@ -4637,7 +4706,7 @@ class PDFConsole(cmd.Cmd):
     def parseArgs(self, args):
         '''
             Method to split up the command arguments by quotes: \'\'\', " or \'
-            
+
             @param args: The command arguments
             @return: An array with the separated arguments
         '''
@@ -4695,7 +4764,7 @@ class PDFConsole(cmd.Cmd):
                 else:
                     argsArray.append(args)
                     args = ''
-        #print argsArray
+        # print argsArray
         if len(argsArray) > 1:
             if argsArray[-2] in redirectSymbols:
                 if argsArray[-2] == '>':
@@ -4756,7 +4825,7 @@ class PDFConsole(cmd.Cmd):
     def printBytes(self, bytes):
         '''
             Given a byte string shows the hexadecimal and ascii output in a nice way
-            
+
             @param bytes: A string
             @return: String with mixed hexadecimal and ascii strings, like the 'hexdump -C' output
         '''
@@ -4790,7 +4859,7 @@ class PDFConsole(cmd.Cmd):
     def printResult(self, result):
         '''
             Given an string returns a mixed hexadecimal-ascci output if there are many non printable characters or the same string in other case
-            
+
             @param result: A string
             @return: A mixed hexadecimal-ascii output if there are many non printable characters or the input string in other case
         '''
@@ -4804,7 +4873,7 @@ class PDFConsole(cmd.Cmd):
     def printTreeNode(self, node, nodesInfo, expandedNodes=[], depth=0, recursive=True):
         '''
             Given a tree prints the whole tree and its dependencies
-            
+
             @param node: Root of the tree
             @param nodesInfo: Information abour the nodes of the tree
             @param expandedNodes: Already expanded nodes
