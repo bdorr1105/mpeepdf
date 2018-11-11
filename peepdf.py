@@ -38,9 +38,7 @@ import json
 from datetime import datetime
 from PDFCore import PDFParser, vulnsDict
 from PDFUtils import vtcheck
-
-
-VT_KEY = 'fc90df3f5ac749a94a94cb8bf87e05a681a2eb001aef34b6a0084b8c22c97a64'
+from PDFConstants import *
 
 try:
     import PyV8
@@ -57,7 +55,6 @@ try:
     COLORIZED_OUTPUT = True
 except:
     COLORIZED_OUTPUT = False
-
 try:
     from PIL import Image
     PIL_MODULE = True
@@ -110,12 +107,25 @@ def getPeepXML(statsDict, version, revision):
     sha256.text = statsDict['SHA256']
     size = etree.SubElement(basicInfo, 'size')
     size.text = statsDict['Size']
+    pagesCount = statsDict['Pages Number']
+    if pagesCount is not None:
+        pages = etree.SubElement(basicInfo, 'pages')
+        pages.text = statsDict['Pages Number']
     detection = etree.SubElement(basicInfo, 'detection')
     if statsDict['Detection']:
         detectionRate = etree.SubElement(detection, 'rate')
         detectionRate.text = '%d/%d' % (statsDict['Detection'][0], statsDict['Detection'][1])
         detectionReport = etree.SubElement(detection, 'report_link')
         detectionReport.text = statsDict['Detection report']
+    if statsDict['Score']>=7:
+        scoreMessage="HIGH probability of being malicious"
+    elif statsDict['Score']>=4:
+        scoreMessage="MEDIUM probability of being malicious"
+    else:
+        scoreMessage="LOW probability of being malicious"
+    score = '%0.1f - %s' % (statsDict['Score'],scoreMessage)
+    riskScore = etree.SubElement(basicInfo, 'risk_score')
+    riskScore.text = str(score)
     version = etree.SubElement(basicInfo, 'pdf_version')
     version.text = statsDict['Version']
     binary = etree.SubElement(basicInfo, 'binary', status=statsDict['Binary'].lower())
@@ -139,6 +149,10 @@ def getPeepXML(statsDict, version, revision):
         errorMessageXML = etree.SubElement(errors, 'error_message')
         errorMessageXML.text = error
     advancedInfo = etree.SubElement(root, 'advanced')
+    suspiciousProperties = etree.SubElement(advancedInfo, 'suspicious_global_properties')
+    if statsDict['suspiciousProperties']:
+        for suspiciousProperty in statsDict['suspiciousProperties']:
+            suspiciousPropertyInfo = etree.SubElement(suspiciousProperties, 'suspicious_global_property', name=suspiciousProperty)
     for version in range(len(statsDict['Versions'])):
         statsVersion = statsDict['Versions'][version]
         if version == 0:
@@ -195,7 +209,9 @@ def getPeepXML(statsDict, version, revision):
         actions = statsVersion['Actions']
         events = statsVersion['Events']
         vulns = statsVersion['Vulns']
+        properties = statsVersion['Properties']
         elements = statsVersion['Elements']
+        indicators = statsVersion['Indicators']
         suspicious = etree.SubElement(versionInfo, 'suspicious_elements')
         if events != None or actions != None or vulns != None or elements != None:
             if events:
@@ -234,6 +250,14 @@ def getPeepXML(statsDict, version, revision):
                             cve.text = vulnCVE
                     for id in vulns[vuln]:
                         etree.SubElement(vulnInfo, 'container_object', id=str(id))
+        suspiciousIndicators = etree.SubElement(versionInfo, 'suspicious_indicators')
+        if indicators:
+            for indicator in indicators:
+                etree.SubElement(suspiciousIndicators, 'suspicious_indicator', name=indicator)
+        suspiciousProperties = etree.SubElement(versionInfo, 'suspicious_properties')
+        if properties:
+            for property in properties:
+                etree.SubElement(suspiciousProperties, 'property', name=property)
         urls = statsVersion['URLs']
         suspiciousURLs = etree.SubElement(versionInfo, 'suspicious_urls')
         if urls != None:
@@ -260,6 +284,13 @@ def getPeepJSON(statsDict, version, revision):
     if statsDict['Detection'] != [] and statsDict['Detection'] is not None:
         basicDict['detection']['rate'] = '%d/%d' % (statsDict['Detection'][0], statsDict['Detection'][1])
         basicDict['detection']['report_link'] = statsDict['Detection report']
+    if statsDict['Score']>=7:
+        scoreMessage="HIGH probability of being malicious"
+    elif statsDict['Score']>=4:
+        scoreMessage="MEDIUM probability of being malicious"
+    else:
+        scoreMessage="LOW probability of being malicious"
+    basicDict['maliciousness_score'] = '%.2f - %s' % (statsDict['Score'],scoreMessage)
     basicDict['pdf_version'] = statsDict['Version']
     basicDict['binary'] = bool(statsDict['Binary'])
     basicDict['linearized'] = bool(statsDict['Linearized'])
@@ -277,6 +308,7 @@ def getPeepJSON(statsDict, version, revision):
         basicDict['errors'].append(error)
     # Advanced info
     advancedInfo = []
+    advancedInfo.append({'suspicious_global_properties': statsDict['suspiciousProperties']})
     for version in range(len(statsDict['Versions'])):
         statsVersion = statsDict['Versions'][version]
         if version == 0:
@@ -345,6 +377,21 @@ def getPeepJSON(statsDict, version, revision):
                                               'elements': elementArray,
                                               'js_vulns': vulnArray,
                                               'urls': statsVersion['URLs']}
+        properties = statsVersion['Properties']
+        propertiesArray = []
+        if properties:
+            for prop in properties:
+                propInfo = {'name': prop}
+                propertiesArray.append(propInfo)
+        indicators = statsVersion['Indicators']
+        indicatorArray = []
+        if indicators:
+            for indicator in indicators:
+                indicatorInfo = {'name': indicator}
+                indicatorInfo['objects'] = indicators[indicator]
+                indicatorArray.append(indicatorInfo)
+        versionInfo['suspicious_properties'] = {'suspicious_properties': propertiesArray}
+        versionInfo['suspicious_indicators'] = {'suspicious_indicators': indicatorArray}
         versionReport = {'version_info': versionInfo}
         advancedInfo.append(versionReport)
     jsonDict = {'peepdf_analysis':
@@ -356,13 +403,6 @@ def getPeepJSON(statsDict, version, revision):
     return json.dumps(jsonDict, indent=4, sort_keys=True)
 
 
-author = 'Jose Miguel Esparza'
-email = 'peepdf AT eternal-todo.com'
-url = 'http://peepdf.eternal-todo.com'
-twitter = 'http://twitter.com/EternalTodo'
-peepTwitter = 'http://twitter.com/peepdf'
-version = '0.3'
-revision = '275'
 stats = ''
 pdf = None
 fileName = None
@@ -429,7 +469,7 @@ try:
         localVersion = 'v' + version + ' r' + revision
         reVersion = 'version = \'(\d\.\d)\'\s*?revision = \'(\d+)\''
         repURL = 'https://api.github.com/repos/jesparza/peepdf/contents/'
-        rawRepURL = 'https://raw.githubusercontent.com/jesparza/peepdf/master/'
+        rawRepURL = 'https://raw.githubusercontent.com/jesparza/peepdf/gsoc/'
         print '[-] Checking if there are new updates...'
         try:
             remotePeepContent = urllib2.urlopen(rawRepURL + 'peepdf.py').read()
@@ -482,6 +522,8 @@ try:
             fileName = args[0]
             if not os.path.exists(fileName):
                 sys.exit('Error: The file "' + fileName + '" does not exist!!')
+            elif not os.path.isfile(fileName):
+                sys.exit('Error: "' + fileName + '" is not a file!!')
         elif len(args) > 1 or (len(args) == 0 and not options.isInteractive):
             sys.exit(argsParser.print_help())
 
@@ -491,8 +533,9 @@ try:
 
         if fileName is not None:
             pdfParser = PDFParser()
-            ret, pdf = pdfParser.parse(fileName, options.isForceMode, options.isLooseMode, options.isManualAnalysis)
-            if options.checkOnVT:
+            # print options.isForceMode, options.isLooseMode, options.isManualAnalysis
+            ret, pdf = pdfParser.parse(fileName, options.isForceMode, options.isLooseMode, options.isManualAnalysis, options.checkOnVT)
+            if options.checkOnVT and pdf.detectionRate == []:
                 # Checks the MD5 on VirusTotal
                 md5Hash = pdf.getMD5()
                 ret = vtcheck(md5Hash, VT_KEY)
@@ -590,6 +633,8 @@ try:
                     stats += beforeStaticLabel + 'SHA1: ' + resetColor + statsDict['SHA1'] + newLine
                     stats += beforeStaticLabel + 'SHA256: ' + resetColor + statsDict['SHA256'] + newLine
                     stats += beforeStaticLabel + 'Size: ' + resetColor + statsDict['Size'] + ' bytes' + newLine
+                    pagesCount = statsDict['Pages Number']
+                    stats += beforeStaticLabel + 'Pages Number: ' + resetColor + str(pagesCount) + newLine
                     if options.checkOnVT:
                         if statsDict['Detection'] != []:
                             detectionReportInfo = ''
@@ -625,7 +670,17 @@ try:
                     stats += beforeStaticLabel + 'Streams: ' + resetColor + statsDict['Streams'] + newLine
                     stats += beforeStaticLabel + 'URIs: ' + resetColor + statsDict['URIs'] + newLine
                     stats += beforeStaticLabel + 'Comments: ' + resetColor + statsDict['Comments'] + newLine
-                    stats += beforeStaticLabel + 'Errors: ' + resetColor + str(len(statsDict['Errors'])) + newLine * 2
+                    stats += beforeStaticLabel + 'Errors: ' + resetColor + str(len(statsDict['Errors'])) + newLine
+                    suspiciousProperties = statsDict['suspiciousProperties']
+                    if suspiciousProperties is not None:
+                        if COLORIZED_OUTPUT and not options.avoidColors:
+                            beforeStaticLabel = warningColor
+                        stats += beforeStaticLabel + 'Suspicious Properties:' + resetColor + newLine
+                        for suspiciousProperty in suspiciousProperties:
+                            stats += '\t' + beforeStaticLabel + suspiciousProperty + resetColor + newLine
+                        if COLORIZED_OUTPUT and not options.avoidColors:
+                            beforeStaticLabel = staticColor
+                    stats += newLine
                     for version in range(len(statsDict['Versions'])):
                         statsVersion = statsDict['Versions'][version]
                         stats += beforeStaticLabel + 'Version ' + resetColor + str(version) + ':' + newLine
@@ -678,7 +733,9 @@ try:
                         actions = statsVersion['Actions']
                         events = statsVersion['Events']
                         vulns = statsVersion['Vulns']
+                        properties = statsVersion['Properties']
                         elements = statsVersion['Elements']
+                        indicators = statsVersion['Indicators']
                         if events != None or actions != None or vulns != None or elements != None:
                             stats += newLine + beforeStaticLabel + '\tSuspicious elements:' + resetColor + newLine
                             if events != None:
@@ -711,8 +768,15 @@ try:
                                             stats += vulnCVE + ','
                                         stats = stats[:-1] + '): ' + resetColor + str(elements[element]) + newLine
                                     else:
-                                        stats += '\t\t' + beforeStaticLabel + element + ': ' + resetColor + str(
-                                            elements[element]) + newLine
+                                        stats += '\t\t' + beforeStaticLabel + element + ': ' + resetColor + str(elements[element]) + newLine
+                        if indicators is not None:
+                            stats += newLine + beforeStaticLabel + '\tSuspicious Indicators:' + resetColor + newLine
+                            for indicator in indicators:
+                                stats += '\t\t' + beforeStaticLabel + indicator + ': ' + resetColor + str(indicators[indicator]) + newLine
+                        if properties is not None:
+                            stats += newLine + beforeStaticLabel + '\tSuspicious Properties:' + resetColor + newLine
+                            for prop in properties:
+                                stats += '\t\t' + beforeStaticLabel + prop + newLine
                         if COLORIZED_OUTPUT and not options.avoidColors:
                             beforeStaticLabel = staticColor
                         urls = statsVersion['URLs']
@@ -721,6 +785,21 @@ try:
                             for url in urls:
                                 stats += '\t\t' + url + newLine
                         stats += newLine * 2
+                    
+                    scoreColor= ''
+                    scoreMessage= ''
+                    if COLORIZED_OUTPUT and not options.avoidColors:
+                        if pdf.score >= 7:
+                            scoreColor = alertColor
+                            scoreMessage="HIGH probability of being malicious"
+                        elif pdf.score > 4 and pdf.score < 7:
+                            scoreColor = warningColor
+                            scoreMessage="MEDIUM probability of being malicious"
+                        else:
+                            scoreColor = resetColor
+                            scoreMessage="LOW probability of being malicious"
+                    score = '%s%.1f%s/%d%s - %s' % (scoreColor, pdf.score, resetColor, 10,scoreColor,scoreMessage)
+                    stats += beforeStaticLabel + 'Maliciousness Score: ' + scoreColor + str(score) + resetColor + newLine
                 if fileName != None:
                     print stats
                 if options.isInteractive:
