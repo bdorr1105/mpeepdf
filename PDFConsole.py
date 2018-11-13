@@ -4171,6 +4171,167 @@ class PDFConsole(cmd.Cmd):
         print newLine + 'Performs an XOR operation using the specified key with the content of the specified file or variable, raw bytes of the file or stream/rawstream.'
         print 'If the key is not specified then a bruteforcing XOR is performed.' + newLine
 
+    def do_xor_search_pe(self, argv):
+        content = ''
+        PEFileOffsetPerKey = {}
+        output = ''
+
+        validTypes = ['variable', 'file', 'raw', 'stream', 'rawstream']
+        args = self.parseArgs(argv)
+        if args is None:
+            message = '*** Error: The command line arguments have not been parsed successfully!!'
+            self.log_output('xor ' + argv, message)
+            return False
+
+        if len(args) == 2:
+            if args[0] in ['stream', 'rawstream']:
+                id = args[1]
+                version = None
+            elif args[0] in ['file', 'variable']:
+                srcName = args[1]
+            else:
+                self.help_xor()
+                return False
+            key = None
+        elif len(args) == 3:
+            if args[0] in ['stream', 'rawstream']:
+                id = args[1]
+                if args[2].find('0x') != -1 or args[2].find('\\x') != -1:
+                    version = None
+                    key = args[2]
+                else:
+                    version = args[2]
+                    key = None
+            elif args[0] in ['file', 'variable']:
+                srcName = args[1]
+                key = args[2]
+            elif args[0] == 'raw':
+                offset = args[1]
+                size = args[2]
+                key = None
+            else:
+                self.help_xor()
+                return False
+        elif len(args) == 4:
+            if args[0] in ['stream', 'rawstream']:
+                id = args[1]
+                version = args[2]
+            elif args[0] == 'raw':
+                offset = args[1]
+                size = args[2]
+            else:
+                self.help_xor()
+                return False
+            key = args[3]
+        else:
+            self.help_xor()
+            return False
+
+        type = args[0]
+        if type not in validTypes:
+            self.help_xor()
+            return False
+        if key is not None:
+            key = key.replace('0x', '')
+            key = key.replace('\\x', '')
+            match = re.match('[0-9a-f]{1,2}', key)
+            if not match or match.group() != key:
+                message = '*** Error: The key must be an hexadecimal digit (0x5,0xa1,0x2f...)!!'
+                self.log_output('xor ' + argv, message)
+                return False
+            key = chr(int(key, 16))
+        if type == 'variable':
+            if not self.variables.has_key(srcName):
+                message = '*** Error: The variable does not exist!!'
+                self.log_output('xor ' + argv, message)
+                return False
+            else:
+                content = self.variables[srcName][0]
+        elif type == 'file':
+            if not os.path.exists(srcName):
+                message = '*** Error: The file does not exist!!'
+                self.log_output('xor ' + argv, message)
+                return False
+            else:
+                content = open(srcName, 'rb').read()
+        else:
+            if self.pdfFile is None:
+                message = '*** Error: You must open a file!!'
+                self.log_output('xor ' + argv, message)
+                return False
+            if type == 'raw':
+                if not offset.isdigit() or not size.isdigit():
+                    self.help_xor()
+                    return False
+                offset = int(offset)
+                size = int(size)
+                ret = getBytesFromFile(self.pdfFile.getPath(), offset, size)
+                if ret[0] == -1:
+                    message = '*** Error: The file does not exist!!'
+                    self.log_output('xor ' + argv, message)
+                    return False
+                content = ret[1]
+            else:
+                if not id.isdigit() or (version is not None and not version.isdigit()):
+                    self.help_xor()
+                    return False
+                id = int(id)
+                if version is not None:
+                    version = int(version)
+                    if version > self.pdfFile.getNumUpdates():
+                        message = '*** Error: The version number is not valid!!'
+                        self.log_output('xor ' + argv, message)
+                        return False
+                object = self.pdfFile.getObject(id, version)
+                if object is None:
+                    message = '*** Error: Object not found!!'
+                    self.log_output('xor ' + argv, message)
+                    return False
+                if object.getType() != 'stream':
+                    message = '*** Error: The object doesn\'t contain any stream!!'
+                    self.log_output('xor ' + argv, message)
+                    return False
+                if type == 'stream':
+                    content = object.getStream()
+                else:
+                    content = object.getRawStream()
+
+        content = str(content)
+        if content == '':
+            message = '*** Warning: The content is empty!!'
+            self.log_output('xor ' + argv, message)
+            return False
+        if key is not None:
+            xored = xor(content,key)
+            PEList = containPEFile(xored)
+            if len(PEList) > 0:
+                PEFileOffsetPerKey[key] = PEList
+        else:
+            
+            for i in range(256):
+                key = chr(i)
+                xored = xor(content, key)
+                PEList = containPEFile(xored)
+                if len(PEList) > 0:
+                    PEFileOffsetPerKey[key] = PEList
+        if len(PEFileOffsetPerKey.keys()) > 0:
+            for i in PEFileOffsetPerKey.keys():
+                output += newLine + '[Key: ' + hex(ord(i)) + ']' + ' find PE file(s) at offset(s): '+ newLine 
+                for startOffset,endOffset,PEHeaderContent in PEFileOffsetPerKey[i]:
+                    output += "start offset: %s - end offset: %s - total header bytes: %s" % (str(startOffset),str(endOffset),str(endOffset - startOffset)) + newLine
+                    output += newLine + str(PEHeaderContent) + newLine 
+        else:
+            output += 'There is no PE file found'
+        self.log_output('xor ' + argv, output)
+
+    def help_xor_search_pe(self):
+        print newLine + 'Usage: xor stream|rawstream $object_id [$version] [$key]'
+        print 'Usage: xor raw $offset $num_bytes [$key]'
+        print 'Usage: xor file $file_name [$key]'
+        print 'Usage: xor variable $var_name [$key]'
+        print newLine + 'Performs an 1-byte XOR operation using the specified key with the content of the specified file or variable, raw bytes of the file or stream/rawstream to find all PE files.'
+        print 'If the key is not specified then a bruteforcing XOR is performed to find all PE files.' + newLine
+
     def do_xor_search(self, argv):
         content = ''
         found = False
@@ -4925,3 +5086,4 @@ class PDFConsole(cmd.Cmd):
                 else:
                     return expandedNodes, output
         return expandedNodes, output
+    

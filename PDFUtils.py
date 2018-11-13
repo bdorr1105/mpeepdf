@@ -476,3 +476,20 @@ def vtcheck(md5, vtKey):
     except:
         return (-1, 'An error has occurred while parsing the JSON response from VirusTotal')
     return (0, jsonDict)
+
+def containPEFile(content):
+    """Look for all PE files contained in a specific content based on magic numbers.
+    @Param: is the content to check for PE files
+    @Return: a list of the starting,ending offset and the header content for each PE file found
+    """
+    PEOffset=[]
+    # "MZ" for DOS and "MZ"...."PE.." for PE for win32.
+    regex=re.compile(r"MZ.*?[DOS]?.*?PE",flags=re.DOTALL)
+    matches=regex.finditer(content)   
+    for match in matches:
+        startOffset=match.start()
+        endOffset=match.end()
+        #to void false positive, PE header should not be larger than 500bytes
+        if (endOffset - startOffset) < 500:
+            PEOffset.append((startOffset,endOffset,content[startOffset:endOffset+50]))
+    return PEOffset
