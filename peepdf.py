@@ -92,8 +92,7 @@ def getLocalFilesInfo(filesList):
 
 
 def getPeepXML(statsDict, version, revision):
-    root = etree.Element('peepdf_analysis', version=version + ' r' + revision, url='http://peepdf.eternal-todo.com',
-                         author='Jose Miguel Esparza')
+    root = etree.Element('peepdf_analysis', version=version + ' r' + revision)
     analysisDate = etree.SubElement(root, 'date')
     analysisDate.text = datetime.today().strftime('%Y-%m-%d %H:%M')
     basicInfo = etree.SubElement(root, 'basic')
@@ -117,15 +116,6 @@ def getPeepXML(statsDict, version, revision):
         detectionRate.text = '%d/%d' % (statsDict['Detection'][0], statsDict['Detection'][1])
         detectionReport = etree.SubElement(detection, 'report_link')
         detectionReport.text = statsDict['Detection report']
-    if statsDict['Score']>=7:
-        scoreMessage="HIGH probability of being malicious"
-    elif statsDict['Score']>=4:
-        scoreMessage="MEDIUM probability of being malicious"
-    else:
-        scoreMessage="LOW probability of being malicious"
-    score = '%0.1f - %s' % (statsDict['Score'],scoreMessage)
-    riskScore = etree.SubElement(basicInfo, 'risk_score')
-    riskScore.text = str(score)
     version = etree.SubElement(basicInfo, 'pdf_version')
     version.text = statsDict['Version']
     binary = etree.SubElement(basicInfo, 'binary', status=statsDict['Binary'].lower())
@@ -264,15 +254,30 @@ def getPeepXML(statsDict, version, revision):
             for url in urls:
                 urlInfo = etree.SubElement(suspiciousURLs, 'url')
                 urlInfo.text = url
+    #Scoring
+    scoringInfo = etree.SubElement(root, 'Scoring')
+    
+    if statsDict['Score']>=7:
+        scoreMessage="HIGH probability of being malicious"
+    elif statsDict['Score']>=4:
+        scoreMessage="MEDIUM probability of being malicious"
+    else:
+        scoreMessage="LOW probability of being malicious"
+    score = '%0.1f - %s' % (statsDict['Score'],scoreMessage)
+    riskScore = etree.SubElement(scoringInfo, 'risk_score')
+    riskScore.text = str(score)
     return etree.tostring(root, pretty_print=True)
+      
+def getPeepHTML(statsDict, version, revision):
+
 
 
 def getPeepJSON(statsDict, version, revision):
     # peepdf info
     peepdfDict = {'version': version,
                   'revision': revision,
-                  'author': 'Jose Miguel Esparza',
-                  'url': 'http://peepdf.eternal-todo.com'}
+                  'author': 'Tho Le',
+                 }
     # Basic info
     basicDict = {}
     basicDict['filename'] = statsDict['File']
@@ -394,11 +399,23 @@ def getPeepJSON(statsDict, version, revision):
         versionInfo['suspicious_indicators'] = {'suspicious_indicators': indicatorArray}
         versionReport = {'version_info': versionInfo}
         advancedInfo.append(versionReport)
+    
+    #Scoring  
+    scoreMessage = ''
+    if statsDict['Score']>=7:
+        scoreMessage="HIGH probability of being malicious"
+    elif statsDict['Score']>=4:
+        scoreMessage="MEDIUM probability of being malicious"
+    else:
+        scoreMessage="LOW probability of being malicious"
+    score = '%0.1f - %s' % (statsDict['Score'],scoreMessage)
+    #generate json output
     jsonDict = {'peepdf_analysis':
                     {'peepdf_info': peepdfDict,
                      'date': datetime.today().strftime('%Y-%m-%d %H:%M'),
                      'basic': basicDict,
-                     'advanced': advancedInfo}
+                     'advanced': advancedInfo,
+                     'scoring':{"risk_score":score}}
                 }
     return json.dumps(jsonDict, indent=4, sort_keys=True)
 
@@ -439,10 +456,12 @@ argsParser.add_option('-g', '--grinch-mode', action='store_true', dest='avoidCol
                       help='Avoids colorized output in the interactive console.')
 argsParser.add_option('-v', '--version', action='store_true', dest='version', default=False,
                       help='Shows program\'s version number.')
-argsParser.add_option('-x', '--xml', action='store_true', dest='xmlOutput', default=False,
-                      help='Shows the document information in XML format.')
-argsParser.add_option('-j', '--json', action='store_true', dest='jsonOutput', default=False,
-                      help='Shows the document information in JSON format.')
+argsParser.add_option('-x', '--xml', action='store', dest='xmlPath', type='string',
+                      help='Exports the document information in XML format.')
+argsParser.add_option('-j', '--json', action='store', dest='jsonPath', type='string',
+                      help='Exports the document information in JSON format.')
+argsParser.add_option('-w', '--html', action='store', dest='htmlPath', type='string',
+                      help='Exports the document information in JSON format.')
 argsParser.add_option('-C', '--command', action='append', type='string', dest='commands',
                       help='Specifies a command from the interactive console to be executed.')
 (options, args) = argsParser.parse_args()
@@ -468,8 +487,8 @@ try:
         newVersion = ''
         localVersion = 'v' + version + ' r' + revision
         reVersion = 'version = \'(\d\.\d)\'\s*?revision = \'(\d+)\''
-        repURL = 'https://api.github.com/repos/jesparza/peepdf/contents/'
-        rawRepURL = 'https://raw.githubusercontent.com/jesparza/peepdf/gsoc/'
+        repURL = 'https://api.github.com/repos/tholep/mpeepdf/contents/'
+        rawRepURL = 'https://api.github.com/repos/tholep/mpeepdf/contents/'
         print '[-] Checking if there are new updates...'
         try:
             remotePeepContent = urllib2.urlopen(rawRepURL + 'peepdf.py').read()
@@ -515,7 +534,6 @@ try:
             message = '[+] peepdf updated successfully'
             if newVersion != '':
                 message += ' to ' + newVersion
-            print message
 
     else:
         if len(args) == 1:
@@ -557,24 +575,37 @@ try:
                         pdf.addError('Bad response from VirusTotal!!')
             statsDict = pdf.getStats()
 
-        if options.xmlOutput:
+        if options.xmlPath:
             try:
                 from lxml import etree
 
                 xml = getPeepXML(statsDict, version, revision)
-                sys.stdout.write(xml)
+                with open(options.xmlPath,"wb") as file:
+                    file.write(xml)
             except:
                 errorMessage = '*** Error: Exception while generating the XML file!!'
                 traceback.print_exc(file=open(errorsFile, 'a'))
                 raise Exception('PeepException', 'Send me an email ;)')
-        elif options.jsonOutput and not options.commands:
+        elif options.jsonPath and not options.commands:
             try:
                 jsonReport = getPeepJSON(statsDict, version, revision)
-                sys.stdout.write(jsonReport)
+                with open(options.jsonPath,"wb") as file:
+                    file.write(jsonReport)
             except:
                 errorMessage = '*** Error: Exception while generating the JSON report!!'
                 traceback.print_exc(file=open(errorsFile, 'a'))
                 raise Exception('PeepException', 'Send me an email ;)')
+        elif options.htmlPath and not options.commands:
+            pass
+            #to develop: export an html report, can be used in webserver later on.
+            # try:
+            #     htmlReport = getPeepJSON(statsDict, version, revision)
+            #     with open(options.jsonPath,"wb") as file:
+            #         file.write(jsonReport)
+            # except:
+            #     errorMessage = '*** Error: Exception while generating the JSON report!!'
+            #     traceback.print_exc(file=open(errorsFile, 'a'))
+            #     raise Exception('PeepException', 'Send me an email ;)')
         else:
             if COLORIZED_OUTPUT and not options.avoidColors:
                 try:
@@ -826,9 +857,8 @@ except Exception as e:
     print errorColor + errorMessage + resetColor + newLine
 finally:
     if os.path.exists(errorsFile):
-        message = newLine + 'Please, don\'t forget to report the errors found:' + newLine * 2
-        message += '\t- Sending the file "%s" to the author (mailto:peepdfREMOVETHIS@eternal-todo.com)%s' % (
-            errorsFile, newLine)
-        message += '\t- And/Or creating an issue on the project webpage (https://github.com/jesparza/peepdf/issues)' + newLine
+        message = newLine + "This is a modified version of peepdf (https://github.com/jesparza/peepdf)." + newLine
+        message += 'Please, don\'t forget to report the errors found:' + newLine * 2
+        message += '\t- Creating an issue and upload the file "%s" to the project webpage (https://github.com/tholep/mpeepdf/issues)' % errorsFile + newLine
         message = errorColor + message + resetColor
         sys.exit(message)
