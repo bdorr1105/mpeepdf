@@ -1584,23 +1584,23 @@ class PDFConsole(cmd.Cmd):
                     stats += newLine + beforeStaticLabel + '\tFound URLs:' + self.resetColor + newLine
                     for url in urls:
                         stats += '\t\t' + url + newLine
-                #add scoring to info's output
-                scoreColor = ''
-                scoreMessage = ''
-                if not self.avoidOutputColors:
-                    if self.pdfFile.score >= 7:
-                        scoreColor = self.alertColor
-                        scoreMessage="HIGH probability of being malicious"
-                    elif self.pdfFile.score > 4 and pdfFile.score < 7:
-                        scoreColor = self.warningColor
-                        scoreMessage="MEDIUM probability of being malicious"
-                    else:
-                        scoreColor = self.resetColor
-                        scoreMessage="LOW probability of being malicious"
-                score = '%s%.1f%s/%d%s - %s' % (scoreColor, self.pdfFile.score, self.resetColor, 10,scoreColor,scoreMessage)
-                stats += newLine * 2
-                stats += beforeStaticLabel + 'Maliciousness Score: ' + scoreColor + str(score) + self.resetColor + newLine
-                stats += newLine * 2
+            #add scoring to info's output
+            scoreColor = ''
+            scoreMessage = ''
+            if not self.avoidOutputColors:
+                if self.pdfFile.score >= 7:
+                    scoreColor = self.alertColor
+                    scoreMessage="HIGH probability of being malicious"
+                elif self.pdfFile.score > 4 and pdfFile.score < 7:
+                    scoreColor = self.warningColor
+                    scoreMessage="MEDIUM probability of being malicious"
+                else:
+                    scoreColor = self.resetColor
+                    scoreMessage="LOW probability of being malicious"
+            score = '%s%.1f%s/%d%s - %s' % (scoreColor, self.pdfFile.score, self.resetColor, 10,scoreColor,scoreMessage)
+            stats += newLine * 2
+            stats += beforeStaticLabel + 'Maliciousness Score: ' + scoreColor + str(score) + self.resetColor + newLine
+            stats += newLine * 2
             self.log_output('info ' + argv, stats)
             return False
         elif len(args) == 1:
