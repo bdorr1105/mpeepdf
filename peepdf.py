@@ -269,6 +269,7 @@ def getPeepXML(statsDict, version, revision):
     return etree.tostring(root, pretty_print=True)
       
 def getPeepHTML(statsDict, version, revision):
+    pass
 
 
 
