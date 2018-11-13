@@ -1444,7 +1444,7 @@ class PDFConsole(cmd.Cmd):
             stats += beforeStaticLabel + 'File: ' + self.resetColor + statsDict['File'] + newLine
             stats += beforeStaticLabel + 'MD5: ' + self.resetColor + statsDict['MD5'] + newLine
             stats += beforeStaticLabel + 'SHA1: ' + self.resetColor + statsDict['SHA1'] + newLine
-            #stats += beforeStaticLabel + 'SHA256: ' + self.resetColor + statsDict['SHA256'] + newLine
+            stats += beforeStaticLabel + 'SHA256: ' + self.resetColor + statsDict['SHA256'] + newLine
             stats += beforeStaticLabel + 'Size: ' + self.resetColor + statsDict['Size'] + ' bytes' + newLine
             pagesCount = statsDict['Pages Number']
             stats += beforeStaticLabel + 'Pages Number: ' + self.resetColor + str(pagesCount) + newLine
@@ -1477,22 +1477,12 @@ class PDFConsole(cmd.Cmd):
                     stats += algorithmInfo[0] + ' ' + str(algorithmInfo[1]) + ' bits, '
                 stats = stats[:-2] + ')'
             stats += newLine
-            scoreColor = ''
-            if not self.avoidOutputColors:
-                if self.pdfFile.score >= 7:
-                    scoreColor = self.alertColor
-                elif self.pdfFile.score > 4 and self.pdfFile.score < 7:
-                    scoreColor = self.warningColor
-                else:
-                    scoreColor = self.resetColor
-            score = '%s%.1f%s/%d' % (scoreColor, self.pdfFile.score, self.resetColor, 10)
             stats += beforeStaticLabel + 'Updates: ' + self.resetColor + statsDict['Updates'] + newLine
             stats += beforeStaticLabel + 'Objects: ' + self.resetColor + statsDict['Objects'] + newLine
             stats += beforeStaticLabel + 'Streams: ' + self.resetColor + statsDict['Streams'] + newLine
             stats += beforeStaticLabel + 'URIs: ' + self.resetColor + statsDict['URIs'] + newLine
             stats += beforeStaticLabel + 'Comments: ' + self.resetColor + statsDict['Comments'] + newLine
             stats += beforeStaticLabel + 'Errors: ' + self.resetColor + str(len(statsDict['Errors'])) + newLine * 2
-            stats += beforeStaticLabel + 'Maliciousness Score: ' + scoreColor + str(score) + self.resetColor + newLine
             for version in range(len(statsDict['Versions'])):
                 statsVersion = statsDict['Versions'][version]
                 stats += beforeStaticLabel + 'Version ' + self.resetColor + str(version) + ':' + newLine
@@ -1594,6 +1584,22 @@ class PDFConsole(cmd.Cmd):
                     stats += newLine + beforeStaticLabel + '\tFound URLs:' + self.resetColor + newLine
                     for url in urls:
                         stats += '\t\t' + url + newLine
+                #add scoring to info's output
+                scoreColor = ''
+                scoreMessage = ''
+                if not self.avoidOutputColors:
+                    if self.pdfFile.score >= 7:
+                        scoreColor = self.alertColor
+                        scoreMessage="HIGH probability of being malicious"
+                    elif self.pdfFile.score > 4 and pdfFile.score < 7:
+                        scoreColor = self.warningColor
+                        scoreMessage="MEDIUM probability of being malicious"
+                    else:
+                        scoreColor = self.resetColor
+                        scoreMessage="LOW probability of being malicious"
+                score = '%s%.1f%s/%d%s - %s' % (scoreColor, self.pdfFile.score, self.resetColor, 10,scoreColor,scoreMessage)
+                stats += newLine * 2
+                stats += beforeStaticLabel + 'Maliciousness Score: ' + scoreColor + str(score) + self.resetColor + newLine
                 stats += newLine * 2
             self.log_output('info ' + argv, stats)
             return False
