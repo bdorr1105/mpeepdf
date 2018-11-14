@@ -1,4 +1,24 @@
 -----------------------------------------------
+peepdf 0.5 r238, 2018-Nov-30
+-----------------------------------------------
+
+    * New features:
+
+        - Added scoring system with score command
+        - Added detection of popular suspicious indicators
+        - Added support for json,xml and html report export
+        - Added support for DCTDecode filter
+        - Added JSUnpack javascript analysis approach
+        - Added bruteforce for PE files
+        - Improved tree view
+        - Made javascript detection less sensitive
+
+    * Fixes & improvement:
+
+        - Made javascript detection less sensitive 
+        - Displayed URLs in peepdf output
+   
+-----------------------------------------------
 peepdf 0.4 r256 beta, 2015-08-27
 -----------------------------------------------
 
