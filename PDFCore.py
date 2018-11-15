@@ -4310,6 +4310,7 @@ class PDFBody:
         self.compressedObjects = []
         self.errors = []
         self.duplicateObjects = {}
+        self.unescapedBytes = []
 
     def addCompressedObject(self, id):
         if id not in self.compressedObjects:
@@ -4322,7 +4323,19 @@ class PDFBody:
     def addXrefStream(self, id):
         if id not in self.xrefStreams:
             self.xrefStreams.append(id)
+    
+    def addJavascriptCode(self,code):
+        if code not in self.javascriptCode:
+            self.javascriptCode.append(code)
 
+    def addURLs(self,foundURL):
+        if foundURL not in self.URLs:
+            self.URLs.append(foundURL)
+
+    def addUnescapedBytes(self,unescapedByte):
+        if unescapedByte not in self.unescapedBytes:
+            self.unescapedBytes.append(unescapedByte)
+    
     def containsCompressedObjects(self):
         if len(self.compressedObjects) > 0:
             return True
@@ -5297,6 +5310,48 @@ class PDFFile:
             return (0, '')
         else:
             return (-1, 'Bad PDFTrailer array supplied')
+    
+    def applyJSUnpack(self):
+        """
+            Apply JSUnpack analysis to all found Javascript codes and update new evaluated Javascript code as well as found URLs (if having) to PDFBody
+        """
+        # infoObject to enrich JS code
+        infoObjects=self.getInfoObject()
+        infoObjects=[obj for obj in infoObjects if obj is not None]
+
+        #get annotation data to give data fort getAnnot() and getAnnots()
+        annotsInPagesMaster,annotsNameInPagesMaster = self.getAnnotsData()
+
+        bodyList = pdf.body
+        for body in bodyList:
+            for objID in body.getObjects().keys():
+                    obj = body.getObject(objID)
+                    if obj.containsJS():
+                        content = obj.getJSCode()[0]
+                        if obj.getType() == "stream":
+                            rawContent=obj.getStream()
+                        else:
+                            rawCode=obj.getValue()
+                            
+                        resultPerPDFVersion = JSUnpack(content,rawContent,infoObjects,annotsInPagesMaster,annotsNameInPagesMaster)
+                        for pdfVersion in resultPerPDFVersion.keys():
+                            jsCode = resultPerPDFVersion[pdfVersion][0]
+                            unescapedBytes = resultPerPDFVersion[pdfVersion][1]
+                            urlsFound = resultPerPDFVersion[pdfVersion][2]
+                            jsErrors = resultPerPDFVersion[pdfVersion][3]
+                            # Update jsCode:
+                            for code in jsCode:
+                                body.addJavascriptCode(code)
+                            # Update urls
+                            for url in urlsFound:
+                                body.addURLs(url)
+                            # Update unescapedBytes
+                            for unescapedByte in unescapedBytes:
+                                body.addUnescapedBytes(unescapedByte)
+                            # # Update JSerrors
+                            # for jsError in jsErrors:
+                            #     body.addJsError(jsError)
+                                
     def getScoringFactors(self, checkOnVT=False, nonNull=False):
         '''
             Get all the suspicous Indicators/elements/properties that affect the scoring of PDF.
