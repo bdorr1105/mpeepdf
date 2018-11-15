@@ -777,22 +777,21 @@ try:
                             stats += newLine + beforeStaticLabel + '\tSuspicious Properties:' + resetColor + newLine
                             for prop in properties:
                                 stats += '\t\t' + beforeStaticLabel + prop + newLine
-                        if COLORIZED_OUTPUT and not options.avoidColors:
-                            beforeStaticLabel = staticColor
-                        
+                                                
                         unescapedBytes = statsVersion["unescapedBytes"]
                         if unescapedBytes != None:
-                            stats += newLine + + beforeStaticLabel + '\tFound Unescaped bytes:' + resetColor + newLine
-                            for unescapedByte in unescapedBytes:
-                                stats += '\t\t' + unescapedByte + newLine
+                            stats += newLine + beforeStaticLabel + '\tFound Unescaped bytes (%s)' % str(len(unescapedBytes)) + resetColor + newLine
+                            # for unescapedByte in unescapedBytes:
+                            #     stats += '\t\t' + unescapedByte + newLine
 
                         urls = statsVersion['URLs']
                         if urls != None:
-                            stats += newLine + beforeStaticLabel + '\tFound URLs:' + resetColor + newLine
-                            for url in urls:
-                                stats += '\t\t' + url + newLine
+                            stats += newLine + beforeStaticLabel + '\tFound URLs (%s)' % str(len(urls)) + resetColor + newLine
+                            # for url in urls:
+                            #     stats += '\t\t' + url + newLine
                         stats += newLine * 2
-                        
+                    if COLORIZED_OUTPUT and not options.avoidColors:
+                            beforeStaticLabel = staticColor 
                     scoreColor= ''
                     scoreMessage= ''
                     if COLORIZED_OUTPUT and not options.avoidColors:
@@ -804,6 +803,7 @@ try:
                             scoreMessage="MEDIUM probability of being malicious"
                         else:
                             scoreColor = resetColor
+                            beforeStaticLabel = staticColor
                             scoreMessage="LOW probability of being malicious"
                     score = '%s%.1f%s/%d%s - %s' % (scoreColor, pdf.score, resetColor, 10,scoreColor,scoreMessage)
                     stats += beforeStaticLabel + 'Maliciousness Score: ' + scoreColor + str(score) + resetColor + newLine
