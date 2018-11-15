@@ -1122,7 +1122,7 @@ class PDFConsole(cmd.Cmd):
         print newLine + 'Exits from the console' + newLine
 
     def do_extract(self, argv):
-        validTypes = ['uri', 'js']
+        validTypes = ['uri', 'analysed_js','js','url']
         #TODO Add more extraction types like embedded files, flash, etc
         if self.pdfFile is None:
             message = '*** Error: You must open a file!!'
@@ -1154,10 +1154,24 @@ class PDFConsole(cmd.Cmd):
         output = ''
         extractedUrisPerObject = []
         extractedJsPerObject = []
+        extractedJSCodes = []
+        extractedURLs = []
         if elementType == 'uri':
             extractedUrisPerObject = self.pdfFile.getURIs(version, perObject=True)
         elif elementType == 'js':
             extractedJsPerObject = self.pdfFile.getJavascriptCode(version, perObject=True)
+        elif elementType == 'analysed_js':
+            for body in self.pdfFile.body():
+                jsCode = body.getJSCode()
+                for js in jsCode:
+                    if js not in extractedJSCodes:
+                        extractedJSCodes.append(js)
+        elif elementType == 'url':
+            for body in self.pdfFile.body():
+                urls = body.getURLs()
+                for url in urls:
+                    extractedURLs.append(url)
+
         for version in range(len(extractedUrisPerObject)):
             for extractedUri in extractedUrisPerObject[version]:
                 output += '%s (%d)%s' % (extractedUri[1], extractedUri[0], newLine)
@@ -1170,6 +1184,14 @@ class PDFConsole(cmd.Cmd):
                                                                                                           newLine*2,
                                                                                                           extractedJs[1],
                                                                                                           newLine*2)
+        for jsCode in extractedJSCodes:
+            output += '//peepdf comment: Javascript from auto analysis' + newLine
+            output += jsCode + newLine
+
+        for url in urls:
+            out +='//peepdf comment: URLs found from Javascript codo analysis'
+            out += url + newLine
+            
         self.log_output('extract ' + argv, output)
 
     def help_extract(self):
