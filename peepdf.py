@@ -779,13 +779,20 @@ try:
                                 stats += '\t\t' + beforeStaticLabel + prop + newLine
                         if COLORIZED_OUTPUT and not options.avoidColors:
                             beforeStaticLabel = staticColor
+                        
+                        unescapedBytes = statsVersion["unescapedBytes"]
+                        if unescapedBytes != None:
+                            stats += newLine + + beforeStaticLabel + '\tFound Unescaped bytes:' + resetColor + newLine
+                            for unescapedByte in unescapedBytes:
+                                stats += '\t\t' + unescapedByte + newLine
+
                         urls = statsVersion['URLs']
                         if urls != None:
                             stats += newLine + beforeStaticLabel + '\tFound URLs:' + resetColor + newLine
                             for url in urls:
                                 stats += '\t\t' + url + newLine
                         stats += newLine * 2
-                    
+                        
                     scoreColor= ''
                     scoreMessage= ''
                     if COLORIZED_OUTPUT and not options.avoidColors:

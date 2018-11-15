@@ -5325,7 +5325,7 @@ class PDFFile:
         #get annotation data to give data fort getAnnot() and getAnnots()
         annotsInPagesMaster,annotsNameInPagesMaster = self.getAnnotsData()
 
-        bodyList = pdf.body
+        bodyList = self.body
         for body in bodyList:
             for objID in body.getObjects().keys():
                     obj = body.getObject(objID)
@@ -8701,7 +8701,7 @@ class PDFParser:
         pdfFile.getIsolatedObjects()
         pdfFile.detectGarbageBetweenObjects()
         pdfFile.updateStats()
-        pdf.File.applyJSUnpack()
+        pdfFile.applyJSUnpack()
         pdfFile.calculateScore(checkOnVT)
         return (0, pdfFile)
 
