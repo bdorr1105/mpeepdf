@@ -4491,6 +4491,9 @@ class PDFBody:
 
     def getJSCode(self):
         return self.javascriptCode
+    
+    def getUnescapedBytes(self):
+        return self.unescapedBytes
 
     def getLinearizationObjectId(self):
         return self.linearizationObjectId
@@ -7425,6 +7428,7 @@ class PDFFile:
         stats['Errors'] = self.errors
         stats['Versions'] = []
         stats['Pages Number'] = str(self.pagesCount)
+        # Get information for each PDF version of a PDF file
         for version in range(self.updates + 1):
             statsVersion = {}
             catalogId = None
@@ -7489,6 +7493,19 @@ class PDFFile:
                 statsVersion['Objects with JS code'] = [str(len(containingJS)), containingJS]
             else:
                 statsVersion['Objects with JS code'] = None
+            
+            JSCodeList = self.body[version].getJSCode()
+            if len(JSCodeList) > 0:
+                statsVersion["javascriptCode"] = JSCodeList
+            else:
+                statsVersion["javascriptCode"] = None
+            
+            unescapedBytes = self.body[version].getUnescapedBytes()
+            if len(unescapedBytes) >  0:
+                statsVersion["unescapedBytes"] = unescapedBytes
+            else:
+                statsVersion["unescapedBytes"] = None
+
             actions = self.body[version].getSuspiciousActions()
             events = self.body[version].getSuspiciousEvents()
             vulns = self.body[version].getVulns()
@@ -8684,6 +8701,7 @@ class PDFParser:
         pdfFile.getIsolatedObjects()
         pdfFile.detectGarbageBetweenObjects()
         pdfFile.updateStats()
+        pdf.File.applyJSUnpack()
         pdfFile.calculateScore(checkOnVT)
         return (0, pdfFile)
 
