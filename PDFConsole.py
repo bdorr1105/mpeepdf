@@ -1196,8 +1196,8 @@ class PDFConsole(cmd.Cmd):
 
     def help_extract(self):
         print newLine + 'Usage: extract uri|url|js|analysed_js [$version]'
-        print newLine + 'uri, js: Extracts all the given type elements of the specified version after being decoded and decrypted (if necessary)' + newLine
-        print newLine + 'url, analysed_js: Extracts all the given type elements from results of automatic Javacode analysis' + newLine
+        print newLine + 'uri, js: Extracts all the given type elements of the specified version after being decoded and decrypted (if necessary)'
+        print 'url, analysed_js: Extracts all the given type elements from results of automatic Javacode analysis'
 
 
     def do_filters(self, argv):
