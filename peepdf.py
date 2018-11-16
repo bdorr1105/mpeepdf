@@ -779,14 +779,17 @@ try:
                                 stats += '\t\t' + beforeStaticLabel + prop + newLine
                                                 
                         unescapedBytes = statsVersion["unescapedBytes"]
+                        urls = statsVersion['URLs']
+                        if unescapedBytes != None or rls != None:
+                            stats += newLine + beforeStaticLabel + '\t Automatic JS analysis:' + resetColor + newLine
                         if unescapedBytes != None:
-                            stats += newLine + beforeStaticLabel + '\tFound Unescaped bytes (%s)' % str(len(unescapedBytes)) + resetColor + newLine
+                            stats += beforeStaticLabel + '\tFound Unescaped bytes (%s)' % str(len(unescapedBytes)) + resetColor + newLine
                             # for unescapedByte in unescapedBytes:
                             #     stats += '\t\t' + unescapedByte + newLine
 
-                        urls = statsVersion['URLs']
+                        
                         if urls != None:
-                            stats += newLine + beforeStaticLabel + '\tFound URLs (%s)' % str(len(urls)) + resetColor + newLine
+                            stats += beforeStaticLabel + '\tFound URLs (%s)' % str(len(urls)) + resetColor + newLine
                             # for url in urls:
                             #     stats += '\t\t' + url + newLine
                         stats += newLine * 2

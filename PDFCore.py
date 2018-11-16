@@ -4293,7 +4293,7 @@ class PDFBody:
         self.referencedJSObjects = []
         self.containingJS = []
         self.containingURIs = []
-        self.suspiciousEvents = {}
+        self.suspiciousEvents = {}q
         self.suspiciousActions = {}
         self.suspiciousElements = {}
         self.suspiciousIndicators = {}
@@ -8701,7 +8701,8 @@ class PDFParser:
         pdfFile.getIsolatedObjects()
         pdfFile.detectGarbageBetweenObjects()
         pdfFile.updateStats()
-        pdfFile.applyJSUnpack()
+        if not isManualAnalysis:
+            pdfFile.applyJSUnpack()
         pdfFile.calculateScore(checkOnVT)
         return (0, pdfFile)
 

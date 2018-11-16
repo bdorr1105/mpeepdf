@@ -1161,7 +1161,7 @@ class PDFConsole(cmd.Cmd):
         elif elementType == 'js':
             extractedJsPerObject = self.pdfFile.getJavascriptCode(version, perObject=True)
         elif elementType == 'analysed_js':
-            for body in self.pdfFile.body():
+            for body in self.pdfFile.body:
                 jsCode = body.getJSCode()
                 for js in jsCode:
                     if js not in extractedJSCodes:
@@ -1188,9 +1188,9 @@ class PDFConsole(cmd.Cmd):
             output += '//peepdf comment: Javascript from auto analysis' + newLine
             output += jsCode + newLine
 
-        for url in urls:
-            out +='//peepdf comment: URLs found from Javascript codo analysis'
-            out += url + newLine
+        for url in extractedURLs:
+            output +='//peepdf comment: URLs found from Javascript codo analysis' + newLine
+            output += url + newLine
             
         self.log_output('extract ' + argv, output)
 
@@ -1613,7 +1613,7 @@ class PDFConsole(cmd.Cmd):
                 if self.pdfFile.score >= 7:
                     scoreColor = self.alertColor
                     scoreMessage="HIGH probability of being malicious"
-                elif self.pdfFile.score > 4 and pdfFile.score < 7:
+                elif self.pdfFile.score > 4 and self.pdfFile.score < 7:
                     scoreColor = self.warningColor
                     scoreMessage="MEDIUM probability of being malicious"
                 else:
