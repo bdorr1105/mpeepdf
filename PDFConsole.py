@@ -1167,7 +1167,7 @@ class PDFConsole(cmd.Cmd):
                     if js not in extractedJSCodes:
                         extractedJSCodes.append(js)
         elif elementType == 'url':
-            for body in self.pdfFile.body():
+            for body in self.pdfFile.body:
                 urls = body.getURLs()
                 for url in urls:
                     extractedURLs.append(url)
@@ -1195,8 +1195,9 @@ class PDFConsole(cmd.Cmd):
         self.log_output('extract ' + argv, output)
 
     def help_extract(self):
-        print newLine + 'Usage: extract uri|js [$version]'
-        print newLine + 'Extracts all the given type elements of the specified version after being decoded and decrypted (if necessary)' + newLine
+        print newLine + 'Usage: extract uri|url|js|analysed_js [$version]'
+        print newLine + 'uri, js: Extracts all the given type elements of the specified version after being decoded and decrypted (if necessary)' + newLine
+        print newLine + 'url, analysed_js: Extracts all the given type elements from results of automatic Javacode analysis' + newLine
 
 
     def do_filters(self, argv):
@@ -1602,10 +1603,18 @@ class PDFConsole(cmd.Cmd):
                 if not self.avoidOutputColors:
                     beforeStaticLabel = self.staticColor
                 urls = statsVersion['URLs']
-                if urls is not None:
-                    stats += newLine + beforeStaticLabel + '\tFound URLs:' + self.resetColor + newLine
-                    for url in urls:
-                        stats += '\t\t' + url + newLine
+                unescapedBytes = statsVersion["unescapedBytes"]
+                if unescapedBytes != None or urls != None:
+                    stats += newLine + beforeStaticLabel + '\tAutomatic JS analysis:' + resetColor + newLine
+                if unescapedBytes != None:
+                    stats += '\t\t' + beforeStaticLabel + '\tFound Unescaped bytes (%s)' % str(len(unescapedBytes)) + resetColor + newLine
+                    for unescapedByte in unescapedBytes:
+                        stats += '\t\t\t' + unescapedByte + newLine
+   
+                    if urls != None:
+                        stats += '\t\t' + beforeStaticLabel + '\tFound URLs (%s)' % str(len(urls)) + resetColor + newLine
+                        for url in urls:
+                            stats += '\t\t\t' + url + newLine
             #add scoring to info's output
             scoreColor = ''
             scoreMessage = ''

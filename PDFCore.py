@@ -4293,7 +4293,7 @@ class PDFBody:
         self.referencedJSObjects = []
         self.containingJS = []
         self.containingURIs = []
-        self.suspiciousEvents = {}q
+        self.suspiciousEvents = {}
         self.suspiciousActions = {}
         self.suspiciousElements = {}
         self.suspiciousIndicators = {}
