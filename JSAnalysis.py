@@ -179,7 +179,7 @@ def JSUnpack(code, rawCode=None, infoObjects=[], annotsInPagesMaster='[]', annot
                                     ret = unescape(varContent)
                                     if ret[0] != -1:
                                         bytes = ret[1]
-                                        urls = re.findall('https?://.*$', bytes, re.DOTALL)
+                                        urls = re.findall(r'https?://[a-zA-Z0-9\./]+', bytes, re.DOTALL)
                                         if bytes not in unescapedBytes:
                                             unescapedBytes.append(bytes)
                                         for url in urls:
@@ -191,7 +191,7 @@ def JSUnpack(code, rawCode=None, infoObjects=[], annotsInPagesMaster='[]', annot
                                     ret = unescape(bytes)
                                     if ret[0] != -1:
                                         bytes = ret[1]
-                                        urls = re.findall('https?://.*$', bytes, re.DOTALL)
+                                        urls = re.findall(r'https?://[a-zA-Z0-9\./]+', bytes, re.DOTALL)
                                         if bytes not in unescapedBytes:
                                             unescapedBytes.append(bytes)
                                         for url in urls:
@@ -206,7 +206,7 @@ def JSUnpack(code, rawCode=None, infoObjects=[], annotsInPagesMaster='[]', annot
                                 ret = unescape(bytes)
                                 if ret[0] != -1:
                                     bytes = ret[1]
-                                    urls = re.findall('https?://.*$', bytes, re.DOTALL)
+                                    urls = re.findall(r'https?://[a-zA-Z0-9\./]+', bytes, re.DOTALL)
                                     if bytes not in unescapedBytes:
                                         unescapedBytes.append(bytes)
                                     for url in urls:
