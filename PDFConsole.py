@@ -1614,7 +1614,8 @@ class PDFConsole(cmd.Cmd):
                         stats += '\t\t' + beforeStaticLabel + '\tFound URLs (%s)' % str(len(urls)) + self.resetColor + newLine
                         for url in urls:
                             stats += '\t\t\t' + url + newLine
-            
+                if not self.avoidOutputColors:
+                    beforeStaticLabel = self.staticColor
             #add scoring to info's output
             scoreColor = ''
             scoreMessage = ''

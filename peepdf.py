@@ -825,7 +825,10 @@ try:
                             # for url in urls:
                             #     stats += '\t\t' + url + newLine
                         stats += newLine * 2
-                    
+                        # reset color
+                        if COLORIZED_OUTPUT and not options.avoidColors:
+                            beforeStaticLabel = staticColor
+                            
                     scoreColor= ''
                     scoreMessage= ''
                     if COLORIZED_OUTPUT and not options.avoidColors:
