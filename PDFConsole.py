@@ -1600,32 +1600,35 @@ class PDFConsole(cmd.Cmd):
                     stats += newLine + beforeStaticLabel + '\tSuspicious Properties:' + self.resetColor + newLine
                     for prop in properties:
                         stats += '\t\t' + beforeStaticLabel + prop + newLine
-                if not self.avoidOutputColors:
-                    beforeStaticLabel = self.staticColor
+                
                 urls = statsVersion['URLs']
                 unescapedBytes = statsVersion["unescapedBytes"]
                 if unescapedBytes != None or urls != None:
-                    stats += newLine + beforeStaticLabel + '\tAutomatic JS analysis:' + resetColor + newLine
+                    stats += newLine + beforeStaticLabel + '\tAutomatic JS analysis:' + self.resetColor + newLine
                 if unescapedBytes != None:
-                    stats += '\t\t' + beforeStaticLabel + '\tFound Unescaped bytes (%s)' % str(len(unescapedBytes)) + resetColor + newLine
+                    stats += '\t\t' + beforeStaticLabel + '\tFound Unescaped bytes (%s)' % str(len(unescapedBytes)) + self.resetColor + newLine
                     for unescapedByte in unescapedBytes:
                         stats += '\t\t\t' + unescapedByte + newLine
    
                     if urls != None:
-                        stats += '\t\t' + beforeStaticLabel + '\tFound URLs (%s)' % str(len(urls)) + resetColor + newLine
+                        stats += '\t\t' + beforeStaticLabel + '\tFound URLs (%s)' % str(len(urls)) + self.resetColor + newLine
                         for url in urls:
                             stats += '\t\t\t' + url + newLine
+            
             #add scoring to info's output
             scoreColor = ''
             scoreMessage = ''
             if not self.avoidOutputColors:
                 if self.pdfFile.score >= 7:
+                    beforeStaticLabel = self.alertColor
                     scoreColor = self.alertColor
                     scoreMessage="HIGH probability of being malicious"
                 elif self.pdfFile.score > 4 and self.pdfFile.score < 7:
+                    beforeStaticLabel = self.warningColor
                     scoreColor = self.warningColor
                     scoreMessage="MEDIUM probability of being malicious"
                 else:
+                    beforeStaticLabel = self.staticColor
                     scoreColor = self.resetColor
                     scoreMessage="LOW probability of being malicious"
             score = '%s%.1f%s/%d%s - %s' % (scoreColor, self.pdfFile.score, self.resetColor, 10,scoreColor,scoreMessage)

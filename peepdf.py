@@ -793,15 +793,16 @@ try:
                             # for url in urls:
                             #     stats += '\t\t' + url + newLine
                         stats += newLine * 2
-                    if COLORIZED_OUTPUT and not options.avoidColors:
-                            beforeStaticLabel = staticColor 
+                    
                     scoreColor= ''
                     scoreMessage= ''
                     if COLORIZED_OUTPUT and not options.avoidColors:
                         if pdf.score >= 7:
+                            beforeStaticLabel = alertColor
                             scoreColor = alertColor
                             scoreMessage="HIGH probability of being malicious"
                         elif pdf.score > 4 and pdf.score < 7:
+                            beforeStaticLabel = warningColor
                             scoreColor = warningColor
                             scoreMessage="MEDIUM probability of being malicious"
                         else:
