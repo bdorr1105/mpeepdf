@@ -254,6 +254,20 @@ def getPeepXML(statsDict, version, revision):
             for url in urls:
                 urlInfo = etree.SubElement(suspiciousURLs, 'url')
                 urlInfo.text = url
+        # add Javascript
+        jsCodes = statsVersion["javascriptCode"]
+        javascriptCodes = etree.SubElement(versionInfo, 'javascriptCodes')
+        if jsCodes:
+            for jsCode in jsCodes:
+                code = etree.SubElement(javascriptCodes, 'js')
+                Code.text = str(jsCode)
+        # add unescaped bytes
+        unescaped = statsVersion["unescapedBytes"]
+        unescapedBytes = etree.SubElement(versionInfo, 'unescapedBytes')
+        if unescapedBytes:
+            for unescapedByte in unescapedBytes:
+                byte = etree.SubElement(javascriptCodes, 'unescaped')
+                byte.text =  str(unescapedByte)
     #Scoring
     scoringInfo = etree.SubElement(root, 'Scoring')
     
@@ -291,7 +305,6 @@ def getPeepJSON(statsDict, version, revision):
         basicDict['detection']['rate'] = '%d/%d' % (statsDict['Detection'][0], statsDict['Detection'][1])
         basicDict['detection']['report_link'] = statsDict['Detection report']
  
-    basicDict['maliciousness_score'] = '%.2f - %s' % (statsDict['Score'],scoreMessage)
     basicDict['pdf_version'] = statsDict['Version']
     basicDict['binary'] = bool(statsDict['Binary'])
     basicDict['linearized'] = bool(statsDict['Linearized'])
@@ -401,7 +414,7 @@ def getPeepJSON(statsDict, version, revision):
         # Javascript codes
         javascriptCodes.append({version:statsVersion["javascriptCode"]})
         # unescaped bytes founds
-        unescapedBytes.append({version:statsVersion["unescapedBytes"]})
+        unescapedBytes.append({version:str(statsVersion["unescapedBytes"])})
     
     #Scoring  
     scoreMessage = ''
@@ -419,9 +432,10 @@ def getPeepJSON(statsDict, version, revision):
                      'date': datetime.today().strftime('%Y-%m-%d %H:%M'),
                      'basic': basicDict,
                      'advanced': advancedInfo,
-                     'scoring':{"risk_score":score}},
+                     'scoring':{"risk_score":score},
                      'javascriptCode': javascriptCodes,
                      'unescapedBytes': unescapedBytes
+                    }
                 }
     return json.dumps(jsonDict, indent=4, sort_keys=True)
 
