@@ -290,12 +290,7 @@ def getPeepJSON(statsDict, version, revision):
     if statsDict['Detection'] != [] and statsDict['Detection'] is not None:
         basicDict['detection']['rate'] = '%d/%d' % (statsDict['Detection'][0], statsDict['Detection'][1])
         basicDict['detection']['report_link'] = statsDict['Detection report']
-    if statsDict['Score']>=7:
-        scoreMessage="HIGH probability of being malicious"
-    elif statsDict['Score']>=4:
-        scoreMessage="MEDIUM probability of being malicious"
-    else:
-        scoreMessage="LOW probability of being malicious"
+ 
     basicDict['maliciousness_score'] = '%.2f - %s' % (statsDict['Score'],scoreMessage)
     basicDict['pdf_version'] = statsDict['Version']
     basicDict['binary'] = bool(statsDict['Binary'])
@@ -314,6 +309,9 @@ def getPeepJSON(statsDict, version, revision):
         basicDict['errors'].append(error)
     # Advanced info
     advancedInfo = []
+    javascriptCodes = []
+    unescapedBytes =  []
+
     advancedInfo.append({'suspicious_global_properties': statsDict['suspiciousProperties']})
     for version in range(len(statsDict['Versions'])):
         statsVersion = statsDict['Versions'][version]
@@ -400,6 +398,10 @@ def getPeepJSON(statsDict, version, revision):
         versionInfo['suspicious_indicators'] = {'suspicious_indicators': indicatorArray}
         versionReport = {'version_info': versionInfo}
         advancedInfo.append(versionReport)
+        # Javascript codes
+        javascriptCodes.append({version:statsVersion["javascriptCode"]})
+        # unescaped bytes founds
+        unescapedBytes.append({version:statsVersion["unescapedBytes"]})
     
     #Scoring  
     scoreMessage = ''
@@ -410,13 +412,16 @@ def getPeepJSON(statsDict, version, revision):
     else:
         scoreMessage="LOW probability of being malicious"
     score = '%0.1f - %s' % (statsDict['Score'],scoreMessage)
+
     #generate json output
     jsonDict = {'peepdf_analysis':
                     {'peepdf_info': peepdfDict,
                      'date': datetime.today().strftime('%Y-%m-%d %H:%M'),
                      'basic': basicDict,
                      'advanced': advancedInfo,
-                     'scoring':{"risk_score":score}}
+                     'scoring':{"risk_score":score}},
+                     'javascriptCode': javascriptCodes,
+                     'unescapedBytes': unescapedBytes
                 }
     return json.dumps(jsonDict, indent=4, sort_keys=True)
 
