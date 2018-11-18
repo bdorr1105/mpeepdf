@@ -301,6 +301,7 @@ def getPeepHTML(statsDict,jsCodesInPDF,urlsInPDF,unescapedBytesInPDF):
     font-size: 15px;}
     h2 {
     background-color: #777;
+    color: white;
     }
     .active, .collapsible:hover {
     background-color: #555;
@@ -574,6 +575,9 @@ def getPeepHTML(statsDict,jsCodesInPDF,urlsInPDF,unescapedBytesInPDF):
     for error in errors:
         if error.find('Decryption error') != -1:
             errorSession += itemString % ("base","PeePDF errors: ","warning",str(error)) + newLine
+    # In case of no error found
+    if len(errorSession) <1:
+        errorSession = itemString % ("base","PeePDF errors: ","normal","There is no errors") + newLine
     return html % (summarySession,jsCodesSession,urlsSession,unescapedBytesSession,errorSession)
 def getPeepJSON(statsDict, version, revision):
     # peepdf info
