@@ -525,7 +525,7 @@ def getPeepHTML(statsDict,jsCodesInPDF,urlsInPDF,unescapedBytesInPDF):
         if unescapedBytes != None or urls != None:
             summarySession += '\t' + itemString % ("warning","Automatic JS analysis:","warning","") + newLine
         if unescapedBytes != None:
-            summarySession += '\t\t' + itemString % ("warning","Found URLs: ","warning",str(len(unescapedBytes))) + newLine
+            summarySession += '\t\t' + itemString % ("warning","Found unescaped bytes: ","warning",str(len(unescapedBytes))) + newLine
         if urls != None:
             summarySession += '\t\t' + itemString % ("warning","Found URLs: ","warning",str(len(urls))) + newLine
     #Scoring
@@ -544,15 +544,17 @@ def getPeepHTML(statsDict,jsCodesInPDF,urlsInPDF,unescapedBytesInPDF):
 
     #Javascript session
     for jsCode in jsCodesInPDF:
-        jsCodesSession +=itemString % ("warning","="*30,"normal","") + newLine
-        jsCodesSession +=itemString % ("base","","normal",jsCode) + newLine
+        jsCodesSession +=itemString % ("warning","="*100,"normal","") + newLine
+        jsCodesSession +=itemString % ("warning","="*100,"normal","") + newLine
+        jsCodesSession +=itemString % ("base","","normal",str(jsCode)) + newLine
     #URLs session
     for url in urlsInPDF:
-        urlsSession +=itemString % ("base","","normal",url) + newLine
+        urlsSession +=itemString % ("base","","normal",str(url)) + newLine
     #UnescapedBytes
     for unescaped in unescapedBytesInPDF:
-        unescapedBytesSession +=itemString % ("warning","="*30,"normal","") + newLine
-        unescapedBytesSession +=itemString % ("base","","normal",unescaped) + newLine
+        unescapedBytesSession +=itemString % ("warning","="*100,"normal","") + newLine
+        unescapedBytesSession +=itemString % ("warning","="*100,"normal","") + newLine
+        unescapedBytesSession +=itemString % ("base","","normal",str(unescaped)) + newLine
     
     # Error session
     if not JS_MODULE:
