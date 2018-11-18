@@ -260,7 +260,7 @@ def getPeepXML(statsDict, version, revision):
         if jsCodes:
             for jsCode in jsCodes:
                 code = etree.SubElement(javascriptCodes, 'js')
-                Code.text = str(jsCode)
+                code.text = str(jsCode)
         # add unescaped bytes
         unescaped = statsVersion["unescapedBytes"]
         unescapedBytes = etree.SubElement(versionInfo, 'unescapedBytes')
@@ -282,11 +282,290 @@ def getPeepXML(statsDict, version, revision):
     riskScore.text = str(score)
     return etree.tostring(root, pretty_print=True)
       
-def getPeepHTML(statsDict, version, revision):
-    pass
+def getPeepHTML(statsDict,jsCodesInPDF,urlsInPDF,unescapedBytesInPDF):
+    html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+    .collapsible{
+    background-color: #777;
+    color: white;
+    cursor: pointer;
+    padding: 18px;
+    width: 100%%;
+    border: none;
+    text-align: left;
+    outline: none;
+    font-size: 15px;}
+    h2 {
+    background-color: #777;
+    color: white;
+    font-size: 15px;
+    }
+    .active, .collapsible:hover {
+    background-color: #555;
+    }
+    .content {
+    padding: 0 18px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.2s ease-out;
+    background-color: #f1f1f1;
+    }
+    .mainContent {
+    padding: 0 18px;
+    max-height: 0;
+    transition: max-height 0.2s ease-out;
+    background-color: #f1f1f1;}
+
+    .base{
+    color: black;
+    font-weight: bold;
+    }
+    .normal{
+    olor: black;
+    }
+
+    .warning{
+        color: orange;
+    }
+    .critical{
+    color: red;
+    }
+    </style>
+    </head>
+    <body>
+    <center> <h2>Analysis Report</h2> </center>
+    <button class="collapsible" class="active">Summary</button>
+    <div class="content">
+    <pre>
+    %s
+    </pre>
+    </div>
+
+    <button class="collapsible">Found JS Code</button>
+    <div class="content">
+    <pre>
+    %s
+    </pre>
+    </div>
+
+    <button class="collapsible">Found URLs in JS</button>
+    <div class="content">
+    <pre>
+    %s
+    </pre>
+    </div>
+
+    <button class="collapsible">Found UnescapedBytes</button>
+    <div class="content">
+    <pre>
+    %s
+    </pre>
+    </div>
+
+    <button class="collapsible">Errors</button>
+    <div class="content">
+    <pre>
+    %s
+    </pre>
+    </div>
+
+    <script>
+
+    var coll = document.getElementsByClassName("collapsible");
+    var i;
+    for (i = 0; i < coll.length; i++) {
+    coll[i].addEventListener("click", function(){
+                this.classList.toggle("active");
+                var content = this.nextElementSibling;
+                if (content.style.maxHeight)
+                {
+                    content.style.maxHeight = null;
+                } else{
+                    content.style.maxHeight = content.scrollHeight + "px";
+                }
+        });
+    }
+    </script>
+    </body>
+    </html>
+    """
+    itemString = '<span class="%s"> %s </span> <span class="%s"> %s </span><br>'
+    summarySession = '' + newLine
+    jsCodesSession = '' + newLine
+    urlsSession = '' + newLine
+    unescapedBytesSession = '' + newLine
+    errorSession = '' + newLine
+
+    # Summary session
+    #basic info
+    summarySession += itemString % ("base","File: ","normal",statsDict['File']) + newLine
+    summarySession += itemString % ("base","MD5: ","normal",statsDict['MD5']) + newLine
+    summarySession += itemString % ("base","SHA1: ","normal",statsDict['SHA1']) + newLine
+    summarySession += itemString % ("base","SHA256: ","normal",statsDict['SHA256']) + newLine
+    summarySession += itemString % ("base","Size: ","normal",statsDict['Size']) + newLine
+    summarySession += itemString % ("base","Pages Number: ","normal",str(statsDict['Pages Number'])) + newLine
+    if statsDict['Detection'] != [] and statsDict['Detection'] is not None:
+        if statsDict['Detection'][0] > 0:
+            summarySession += itemString % ("base","VirusTotal Detection: ","warning",str(statsDict['Detection'][0])+"/"+str(statsDict['Detection'][1])) + newLine
+        else:
+            summarySession += itemString % ("base","VirusTotal Detection: ","normal",str(statsDict['Detection'][0])+"/"+statsDict['Detection'][1]) + newLine
+    summarySession += itemString % ("base","Version: ","normal",statsDict['Version']) + newLine
+    summarySession += itemString % ("base","Binary: ","normal",statsDict['Binary']) + newLine
+    summarySession += itemString % ("base","Linearized: ","normal",statsDict['Linearized']) + newLine
+    summarySession += itemString % ("base","Encrypted: ","normal",statsDict['Encrypted']) + newLine
+    #advanced info
+    summarySession += itemString % ("base","Updates: ","normal",statsDict['Updates']) + newLine
+    summarySession += itemString % ("base","Objects: ","normal",statsDict['Objects']) + newLine
+    summarySession += itemString % ("base","Streams: ","normal",statsDict['Streams']) + newLine
+    summarySession += itemString % ("base","URIs: ","normal",statsDict['URIs']) + newLine
+    summarySession += itemString % ("base","Comments: ","normal",statsDict['Comments']) + newLine
+    summarySession += itemString % ("base","Errors: ","normal",str(len(statsDict['Errors']))) + newLine
+    
+    suspiciousProperties = statsDict['suspiciousProperties']
+    summarySession += itemString % ("warning","Suspicious Properties:","normal","") + newLine
+    for suspiciousProperty in suspiciousProperties:
+        summarySession += itemString % ("base","","warning",str(suspiciousProperty)) + newLine
+
+    summarySession += "<br>" + newLine
+
+    for version in range(len(statsDict['Versions'])):
+        statsVersion = statsDict['Versions'][version]
+        summarySession += itemString % ("base","Version ","normal",str(version)) + newLine
+        if statsVersion['Catalog'] != None:
+            summarySession += '\t' + itemString % ("base","Catalog: ","normal",statsVersion['Catalog']) + newLine
+        else:
+            summarySession += '\t' + itemString % ("base","Catalog: ","normal","no") + newLine
+
+        if statsVersion['Info'] != None:
+            summarySession += '\t' + itemString % ("base","Info: ","normal",statsVersion['Info']) + newLine
+        else:
+            summarySession += '\t' + itemString % ("base","Info: ","normal",statsVersion['Info']) + newLine
+ 
+        summarySession += '\t' + itemString % ("base",'Objects (' + statsVersion['Objects'][0] + '): ',"normal",str(statsVersion['Objects'][1])) + newLine
+        if statsVersion['Compressed Objects'] != None:
+            summarySession += '\t' + itemString % ("base",'Compressed objects (' + statsVersion['Compressed Objects'][0] + '): ',"normal",str(statsVersion['Compressed Objects'][1])) + newLine
+        if statsVersion['Errors'] != None:
+            summarySession += '\t\t' + itemString % ("base",'Errors (' + statsVersion['Errors'][0] + '): ',"normal",str(statsVersion['Errors'][1])) + newLine
+        summarySession += '\t' + itemString % ("base",'Streams (' + statsVersion['Streams'][0] + '): ',"normal",str(statsVersion['Streams'][1])) + newLine
+
+        if statsVersion['Xref Streams'] != None:
+            summarySession += '\t\t' + itemString % ("base",'Xref streams (' + statsVersion['Xref Streams'][0] + '): ',"normal",str(statsVersion['Xref Streams'][1])) + newLine
+
+        if statsVersion['Object Streams'] != None:
+            summarySession += '\t\t' + itemString % ("base",'Object streams (' + statsVersion['Object Streams'][0] + '): ',"normal",str(statsVersion['Object Streams'][1])) + newLine
+        if int(statsVersion['Streams'][0]) > 0:
+            summarySession += '\t\t' + itemString % ("base",'Encoded (' + statsVersion['Encoded'][0] + '): ',"normal",str(statsVersion['Encoded'][1])) + newLine
+            if statsVersion['Decoding Errors'] != None:
+                summarySession += '\t\t' + itemString % ("base",'Decoding errors (' + statsVersion['Decoding Errors'][0] + '): ',"normal",str(statsVersion['Decoding Errors'][1])) + newLine
+        if statsVersion['URIs'] is not None:
+            summarySession += '\t' + itemString % ("base",'Objects with URIs (' + statsVersion['URIs'][0] + '): ' ,"normal",str(statsVersion['URIs'][1])) + newLine
+            summarySession += '\t' + itemString % ("base","Found URIs:" ,"normal","") + newLine
+            for display in statsVersion['URIDisplay']:
+                display=str(display)
+                if "http" in display.lower():
+                    summarySession += '\t\t' + itemString % ("base","" ,"normal",display) + newLine
+
+        if statsVersion['Objects with JS code'] != None:
+            summarySession += '\t' + itemString % ("warning",'Objects with JS code (' + statsVersion['Objects with JS code'][0] + '): ' ,"normal",str(statsVersion['Objects with JS code'][1])) + newLine
 
 
+        actions = statsVersion['Actions']
+        events = statsVersion['Events']
+        vulns = statsVersion['Vulns']
+        properties = statsVersion['Properties']
+        elements = statsVersion['Elements']
+        indicators = statsVersion['Indicators']
+        if events != None or actions != None or vulns != None or elements != None:
+            summarySession += '\t' + itemString % ("warning","Suspicious elements:" ,"normal","") + newLine
+            if events != None:
+                for event in events:
+                    summarySession += '\t\t' + itemString % ("warning",event + ' (%d): ' % len(events[event]),"normal",str(events[event])) + newLine
+            if actions != None:
+                for action in actions:
+                    summarySession += '\t\t' + itemString % ("warning",action + ' (%d): ' % len(actions[action]),"normal",str(actions[action])) + newLine
+            if vulns != None:
+                for vuln in vulns:
+                    if vulnsDict.has_key(vuln):
+                        vulnName = vulnsDict[vuln][0]
+                        vulnCVEList = vulnsDict[vuln][1]
+                        vulString = vulnName + ' ('
+                        for vulnCVE in vulnCVEList:
+                            vulString += vulnCVE + ','
+                        summarySession += '\t\t' + itemString % ("warning",vulString + ') (%d): ' % len(vulns[vuln]),"normal",str(vulns[vuln])) + newLine
 
+                    else:
+                        summarySession += '\t\t' + itemString % ("warning",vuln + ' (%d): ' % len(vulns[vuln]),"normal",str(vulns[vuln])) + newLine
+            if elements != None:
+                for element in elements:
+                    if vulnsDict.has_key(element):
+                        vulnName = vulnsDict[element][0]
+                        vulnCVEList = vulnsDict[element][1]
+                        vulString = vulnName + ' ('
+                        for vulnCVE in vulnCVEList:
+                            vulString += vulnCVE + ','
+                        summarySession += '\t\t' + itemString % ("warning",vulString + "): ","normal",str(elements[element])) + newLine
+                    else:
+                        summarySession += '\t\t' + itemString % ("warning",element + ": ","normal",str(elements[element])) + newLine
+
+        if indicators is not None:
+            summarySession += '\t' + itemString % ("warning","Suspicious Indicators:" ,"normal","") + newLine
+            for indicator in indicators:
+                summarySession += '\t\t' + itemString % ("warning",indicator,"normal",str(indicators[indicator])) + newLine
+
+        if properties is not None:
+            summarySession += '\t' + itemString % ("warning","Suspicious Properties:","normal","") + newLine
+            for prop in properties:
+                summarySession += '\t\t' + itemString % ("warning","","warning",str(prop)) + newLine
+        unescapedBytes = statsVersion["unescapedBytes"]
+        urls = statsVersion['URLs']
+        if unescapedBytes != None or urls != None:
+            summarySession += '\t' + itemString % ("warning","Automatic JS analysis:","warning","") + newLine
+        if unescapedBytes != None:
+            summarySession += '\t\t' + itemString % ("warning","Found URLs: ","warning",str(len(unescapedBytes))) + newLine
+        if urls != None:
+            summarySession += '\t\t' + itemString % ("warning","Found URLs: ","warning",str(len(urls))) + newLine
+    #Scoring
+    scoreColor= ''
+    scoreMessage= ''
+    if pdf.score >= 7:
+        scoreColor = "critical"
+        scoreMessage="HIGH probability of being malicious"
+    elif pdf.score > 4 and pdf.score < 7:
+        scoreColor = "warning"
+        scoreMessage="MEDIUM probability of being malicious"
+    else:
+        scoreColor = "normal"
+        scoreMessage="LOW probability of being malicious"
+    summarySession += itemString % ("base","Maliciousness Score: ",scoreColor,str(pdf.score)+"-"+scoreMessage) + newLine
+
+    #Javascript session
+    for jsCode in jsCodesInPDF:
+        jsCodesSession +=itemString % ("warning","="*30,"normal","") + newLine
+        jsCodesSession +=itemString % ("base","","normal",jsCode) + newLine
+    #URLs session
+    for url in urlsInPDF:
+        urlsSession +=itemString % ("base","","normal",url) + newLine
+    #UnescapedBytes
+    for unescaped in unescapedBytesInPDF:
+        unescapedBytesSession +=itemString % ("warning","="*30,"normal","") + newLine
+        unescapedBytesSession +=itemString % ("base","","normal",unescaped) + newLine
+    
+    # Error session
+    if not JS_MODULE:
+        errorSession += itemString % ("base","Warning Message: ","warning","PyV8 is not installed!!") + newLine
+    if not EMU_MODULE:
+        errorSession += itemString % ("base","Warning Message: ","warning","pylibemu is not installed!!") + newLine
+    if not PIL_MODULE:
+        errorSession += itemString % ("base","Warning Message: ","warning","Python Imaging Library (PIL) is not installed!!") + newLine
+    errors = statsDict['Errors']
+    for error in errors:
+        if error.find('Decryption error') != -1:
+            errorSession += itemString % ("base","PeePDF errors: ","warning",str(error)) + newLine
+    return html % (summarySession,jsCodesSession,urlsSession,unescapedBytesSession,errorSession)
 def getPeepJSON(statsDict, version, revision):
     # peepdf info
     peepdfDict = {'version': version,
@@ -616,16 +895,35 @@ try:
                 traceback.print_exc(file=open(errorsFile, 'a'))
                 raise Exception('PeepException', 'Send me an email ;)')
         elif options.htmlPath and not options.commands:
-            pass
-            #to develop: export an html report, can be used in webserver later on.
-            # try:
-            #     htmlReport = getPeepJSON(statsDict, version, revision)
-            #     with open(options.jsonPath,"wb") as file:
-            #         file.write(jsonReport)
-            # except:
-            #     errorMessage = '*** Error: Exception while generating the JSON report!!'
-            #     traceback.print_exc(file=open(errorsFile, 'a'))
-            #     raise Exception('PeepException', 'Send me an email ;)')
+           
+            #export an html report, can be used in webserver later on.
+            try:
+                extractedJSCodes = []
+                extractedURLs = []
+                extractedUnescapedBytes= []
+                for body in pdf.body:
+                    jsCodes = body.getJSCode()
+                    for js in jsCodes:
+                        if js not in extractedJSCodes:
+                            extractedJSCodes.append(js)
+                   
+                    urls = body.getURLs()
+                    for url in urls:
+                        if url not in extractedURLs:
+                            extractedURLs.append(url)
+
+                    unescapedBytes = body.getUnescapedBytes()
+                    for unescaped in unescapedBytes:
+                        if unescaped not in extractedUnescapedBytes:
+                            extractedUnescapedBytes.append(unescaped)
+
+                htmlReport = getPeepHTML(statsDict,extractedJSCodes,extractedURLs,extractedUnescapedBytes)
+                with open(options.htmlPath,"wb") as file:
+                    file.write(htmlReport)
+            except:
+                errorMessage = '*** Error: Exception while generating the HTML report!!'
+                traceback.print_exc(file=open(errorsFile, 'a'))
+                raise Exception('PeepException', 'Send me an email ;)')
         else:
             if COLORIZED_OUTPUT and not options.avoidColors:
                 try:
@@ -834,15 +1132,9 @@ try:
                         if unescapedBytes != None or urls != None:
                             stats += newLine + beforeStaticLabel + '\tAutomatic JS analysis:' + resetColor + newLine
                         if unescapedBytes != None:
-                            stats += '\t\t' + beforeStaticLabel + '\tFound Unescaped bytes (%s)' % str(len(unescapedBytes)) + resetColor + newLine
-                            # for unescapedByte in unescapedBytes:
-                            #     stats += '\t\t' + unescapedByte + newLine
-
-                        
+                            stats += beforeStaticLabel + '\t\tFound Unescaped bytes (%s)' % str(len(unescapedBytes)) + resetColor + newLine
                         if urls != None:
-                            stats += '\t\t' + beforeStaticLabel + '\tFound URLs (%s)' % str(len(urls)) + resetColor + newLine
-                            # for url in urls:
-                            #     stats += '\t\t' + url + newLine
+                            stats += beforeStaticLabel + '\t\tFound URLs (%s)' % str(len(urls)) + resetColor + newLine
                         stats += newLine * 2
                         # reset color
                         if COLORIZED_OUTPUT and not options.avoidColors:
