@@ -301,8 +301,6 @@ def getPeepHTML(statsDict,jsCodesInPDF,urlsInPDF,unescapedBytesInPDF):
     font-size: 15px;}
     h2 {
     background-color: #777;
-    color: white;
-    font-size: 15px;
     }
     .active, .collapsible:hover {
     background-color: #555;
@@ -543,18 +541,27 @@ def getPeepHTML(statsDict,jsCodesInPDF,urlsInPDF,unescapedBytesInPDF):
     summarySession += itemString % ("base","Maliciousness Score: ",scoreColor,str(pdf.score)+"-"+scoreMessage) + newLine
 
     #Javascript session
-    for jsCode in jsCodesInPDF:
-        jsCodesSession +=itemString % ("warning","="*100,"normal","") + newLine
-        jsCodesSession +=itemString % ("warning","="*100,"normal","") + newLine
-        jsCodesSession +=itemString % ("base","","normal",str(jsCode)) + newLine
+    if jsCodesInPDF:
+        for jsCode in jsCodesInPDF:
+            jsCodesSession +=itemString % ("warning","="*100,"normal","") + newLine
+            jsCodesSession +=itemString % ("warning","="*100,"normal","") + newLine
+            jsCodesSession +=itemString % ("base","","normal",str(jsCode)) + newLine
+    else:
+        jsCodesSession +=itemString % ("warning","","normal","There is no Javascript found") + newLine
     #URLs session
-    for url in urlsInPDF:
-        urlsSession +=itemString % ("base","","normal",str(url)) + newLine
+    if urlsInPDF:
+        for url in urlsInPDF:
+            urlsSession +=itemString % ("base","","normal",str(url)) + newLine
+    else:
+        urlsSession +=itemString % ("base","","normal","There is no URL found") + newLine
     #UnescapedBytes
-    for unescaped in unescapedBytesInPDF:
-        unescapedBytesSession +=itemString % ("warning","="*100,"normal","") + newLine
-        unescapedBytesSession +=itemString % ("warning","="*100,"normal","") + newLine
-        unescapedBytesSession +=itemString % ("base","","normal",str(unescaped)) + newLine
+    if unescapedBytesInPDF:
+        for unescaped in unescapedBytesInPDF:
+            unescapedBytesSession +=itemString % ("warning","="*100,"normal","") + newLine
+            unescapedBytesSession +=itemString % ("warning","="*100,"normal","") + newLine
+            unescapedBytesSession +=itemString % ("base","","normal",str(unescaped)) + newLine
+    else:
+        unescapedBytesSession +=itemString % ("warning","","normal","There is no unescaped bytes found") + newLine
     
     # Error session
     if not JS_MODULE:
