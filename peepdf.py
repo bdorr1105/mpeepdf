@@ -576,7 +576,7 @@ def getPeepHTML(statsDict,jsCodesInPDF,urlsInPDF,unescapedBytesInPDF):
         if error.find('Decryption error') != -1:
             errorSession += itemString % ("base","PeePDF errors: ","warning",str(error)) + newLine
     # In case of no error found
-    if len(errorSession) <1:
+    if len(errorSession) < 2: # session string has minimum length of 1 due to newLine added
         errorSession = itemString % ("base","PeePDF errors: ","normal","There is no errors") + newLine
     return html % (summarySession,jsCodesSession,urlsSession,unescapedBytesSession,errorSession)
 def getPeepJSON(statsDict, version, revision):
