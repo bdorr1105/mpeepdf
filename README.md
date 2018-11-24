@@ -1,11 +1,11 @@
 # **mpeepdf is a modified version of peepdf**
 
-mpeepdf is a **Python tool to explore PDF files** which provides security analysts and researcher a single powerful platform to investigate PDF.
+mpeepdf is a **Python tool to explore PDF files** which provides security analysts and researcher a single powerful platform to investigate PDF. The ultimate goal of (m)peepdf is to provide a unique, all-you-need framework for security researchers and analysts to investigate a PDF file.
 
 
 ## **Notable functionalities**:
 
-1. **PDF Explore: parsing a PDF file**
+1. **PDF Parser:** provide an advanced parser that supports multiple compression/filter mechanisms as well as presents a PDF in both local and physical views which allows analysts to investigate all information in a single platform
 
   * Decodings: hexadecimal, octal, name objects
   * More used filters
@@ -16,17 +16,30 @@ mpeepdf is a **Python tool to explore PDF files** which provides security analys
   * Metadata
   * Modifications between versions (changelog)
   * Compressed objects (object streams)
-  * Analysis and modification of Javascript (PyV8): unescape, replace, join
-  * Shellcode analysis (Libemu python wrapper, pylibemu)
-  * Variables (set command)
   * Extraction of old versions of the document
   * Easy extraction of objects, Javascript code, shellcodes (>, >>, $>, $>>)
+  * Detect known vulnerabilities and exploits which are highligted in the output as well as contributed to the maliciousness score
   * Checking hashes on **VirusTotal**
   * Suspicious Elements
   * Maliciousness score (by [Rohit Dua](https://www.honeynet.org/node/1304)) 
 
+2. **Javascript analysis:**
+  * Analysis and modification of Javascript (PyV8): unescape, replace, join
+  * Enrich Javascript analysis with information in Info object (e.g author, created date), annotation data (to suplement dat for getAnnot() and getAnnots()) and field names in XML used in /XFA and /Acroform
+  * Automatic Javascript analysis based on [JSUnpack method](https://github.com/urule99/jsunpack-n)
+  * Shellcode analysis (Libemu python wrapper, pylibemu)
 
-**Creation/Modification:**
+
+
+3. **Powerful Interactive Console:** This makes peepdf stand out from other tools since it provides you a framework to work on a parsed PDF.
+
+  * Allow examining all data of a PDF including objects, streams, byte offset, tree view, offset view as well as other metadata such as changelog and hashes. Data can be examined in both raw or decompressed forms.
+  * Support examining relationship between objects/streams via tree view as well as from references to/from an identified object.
+  * Support 1-byte XOR as well as bruteforce XOR to a defined content
+  * Support 1-byte XOR bruteforce to look for PE files embedded
+  * Support variables assignment (via set command and display a variable content via show command). This allows analysts to create varabiles, assign values during their investigation.
+
+4.**Creation/Modification:**
 
   * Basic PDF creation
   * Creation of PDF with Javascript executed wen the document is opened
@@ -38,11 +51,7 @@ mpeepdf is a **Python tool to explore PDF files** which provides security analys
   * Objects modification
 
 
-**Execution modes:**
 
-  * Simple command line execution
-  * **Powerful interactive console** (colorized or not)
-  * Batch mode
 
 
 **TODO:**
