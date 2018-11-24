@@ -5,7 +5,7 @@ mpeepdf is a **Python tool to explore PDF files** which provides security analys
 
 ## **Notable functionalities**:
 
-1. **PDF Parser:** provide an advanced parser that supports multiple compression/filter mechanisms as well as presents a PDF in both local and physical views which allows analysts to investigate all information in a single platform
+**1. PDF Parser:** provide an advanced parser that supports multiple compression/filter mechanisms as well as presents a PDF in both local and physical views which allows analysts to investigate all information in a single platform
 
   * Decodings: hexadecimal, octal, name objects
   * More used filters
@@ -23,7 +23,7 @@ mpeepdf is a **Python tool to explore PDF files** which provides security analys
   * Suspicious Elements
   * Maliciousness score (by [Rohit Dua](https://www.honeynet.org/node/1304)) 
 
-2. **Javascript analysis:**
+**2. Javascript analysis:**
   * Analysis and modification of Javascript (PyV8): unescape, replace, join
   * Enrich Javascript analysis with information in Info object (e.g author, created date), annotation data (to suplement dat for getAnnot() and getAnnots()) and field names in XML used in /XFA and /Acroform
   * Automatic Javascript analysis based on [JSUnpack method](https://github.com/urule99/jsunpack-n)
@@ -31,7 +31,7 @@ mpeepdf is a **Python tool to explore PDF files** which provides security analys
 
 
 
-3. **Powerful Interactive Console:** This makes peepdf stand out from other tools since it provides you a framework to work on a parsed PDF.
+**3. Powerful Interactive Console:** This makes peepdf stand out from other tools since it provides you a framework to work on a parsed PDF.
 
   * Allow examining all data of a PDF including objects, streams, byte offset, tree view, offset view as well as other metadata such as changelog and hashes. Data can be examined in both raw or decompressed forms.
   * Support examining relationship between objects/streams via tree view as well as from references to/from an identified object.
@@ -39,7 +39,7 @@ mpeepdf is a **Python tool to explore PDF files** which provides security analys
   * Support 1-byte XOR bruteforce to look for PE files embedded
   * Support variables assignment (via set command and display a variable content via show command). This allows analysts to create varabiles, assign values during their investigation.
 
-4.**Creation/Modification:**
+**4.Creation/Modification:**
 
   * Basic PDF creation
   * Creation of PDF with Javascript executed wen the document is opened
