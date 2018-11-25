@@ -33,7 +33,7 @@ mpeepdf is a **Python tool to explore PDF files** which provides security analys
 
 **3. Powerful Interactive Console:** This makes peepdf stand out from other tools since it provides you a framework to work on a parsed PDF.
 
-  * Allow examining all data of a PDF including objects, streams, byte offset, tree view, offset view as well as other metadata such as changelog and hashes. Data can be examined in both raw or decompressed forms.
+  * Allow examining all data of a PDF including objects, streams, byte offset, tree view, offset view as well as other metadata such as changelog and hashes. Data can be examined in both raw or decompressed/parsed forms.
   * Support examining relationship between objects/streams via tree view as well as from references to/from an identified object.
   * Support 1-byte XOR as well as bruteforce XOR to a defined content
   * Support 1-byte XOR bruteforce to look for PE files embedded
