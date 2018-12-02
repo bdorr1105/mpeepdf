@@ -56,6 +56,7 @@ errorsFile = 'errors.txt'
 newLine = os.linesep         
 reJSscript = '<script[^>]*?contentType\s*?=\s*?[\'"]application/x-javascript[\'"][^>]*?>(.*?)</script>'
 preDefinedCode = 'var app = this;'
+absPath = os.path.dirname(__file__)
 
 def JSUnpack(code, rawCode=None, infoObjects=[], annotsInPagesMaster='[]', annotsNameInPagesMaster='[]', manualAnalysis=False):
     '''
@@ -298,14 +299,16 @@ def evalJS(code):
     @return: a set of status, eval code, error
     """
     try: 
-        fileNameJS = randomString(10) + ".js.tmp"
+        fileNameJS = os.path.join(absPath,randomString(10) + ".js.tmp")
         # Create temporal JS file
         with open(fileNameJS,'w') as fileJS:
             fileJS.write(code)
         # Use Google V8 Javascript interpreter, but SpiderMoney should generate same results. However, V8 is an active project and release regular update.
         # It is also considered to use the Python wrapper library PyV8 instead of spawning a V8 process. However, there are limitations in PyV8, therefore, using V8 directly is a better option for now.
         # One tested example of limitation in PyV8: context.eval('x = unescaped("escapedString_%u0909%0909...")') will return a JSArray with same hex string in all elements.
-        po = subprocess.Popen(['v8', '-f', 'pre.js', '-f', fileNameJS , '-f', 'post.js'],shell=False, stdout=PIPE, stderr=PIPE)
+        pre = os.path.join(absPath,'pre.js')
+        post = os.path.join(absPath,'post.js')
+        po = subprocess.Popen(['v8', '-f', pre, '-f', fileNameJS , '-f', post],shell=False, stdout=PIPE, stderr=PIPE)
         return (0,po.stdout.read(),po.stderr.read())
     except:
         error = str(sys.exc_info()[1])
