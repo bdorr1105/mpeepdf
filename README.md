@@ -2,6 +2,8 @@
 
 mpeepdf is a **Python tool to explore PDF files** which provides security analysts and researcher a single powerful platform to investigate PDF. The ultimate goal of (m)peepdf is to provide a unique, all-you-need framework for security researchers and analysts to investigate a PDF file.
 
+For user guides, refer to [Investigate a malicious PDF with mpeepdf](https://github.com/Tholep/mpeepdf/wiki/Investigate-a-malicious-PDF-with-mpeepdf)
+
 
 ## **Notable functionalities**:
 
