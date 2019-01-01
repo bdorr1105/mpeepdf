@@ -24,6 +24,7 @@ mpeepdf is a **Python tool to explore PDF files** which provides security analys
   * Maliciousness score (by [Rohit Dua](https://www.honeynet.org/node/1304)) 
 
 **2. Javascript analysis:**
+
   * Analysis and modification of Javascript (PyV8): unescape, replace, join
   * Enrich Javascript analysis with information in Info object (e.g author, created date), annotation data (to suplement dat for getAnnot() and getAnnots()) and field names in XML used in /XFA and /Acroform
   * Automatic Javascript analysis based on [JSUnpack method](https://github.com/urule99/jsunpack-n)
@@ -51,15 +52,30 @@ mpeepdf is a **Python tool to explore PDF files** which provides security analys
   * Objects modification
 
 
+## **Changes in mpeepdf**:
 
+1. Javascript analysis: adopt the JSUnpack approach: 
 
+    (a)) enriching Javascript analysis by data in PDF files: metadata, anotation (supporting for getAnnot and getAnnots)
+    (b) using a post processing script to capture escaped/unescaped strings
+    (c) Overwrite Eval function to print out
+
+2. Maliciousness score: This is done by (by [Rohit Dua](https://www.honeynet.org/node/1304)) and was implemented as a branch in the peepdf repository. Since the factors used for scoring are thorough, the author decided to merge into mpeepdf.
+
+3. tree command: was modified to display more information regarding objects/streams as well as highlight "interesting" artefacts.
+
+4. Javascript code detection: was modified to make it less sensitive to texts that have a-like characteristics as Javascript codes
+
+5. Add URIs display: /URI(s) found in PDF will be displayed in the main output.
 
 **TODO:**
 
   * Adop the logging library and enrich more logging inforamtion
   * Adop YAML to store all configuration
   * Build a web server
-  
+  * Support Flash analysis
+  * Support other common de-ofruscation technique a part from XOR (cunrretly only support XOR via xor_search_pe)
+  * Support Shellcode search
 
 
 **Related articles:**
