@@ -426,7 +426,6 @@ def getPeepHTML(statsDict,jsCodesInPDF,urlsInPDF,unescapedBytesInPDF):
     
     suspiciousProperties = statsDict['suspiciousProperties']
     if suspiciousProperties is not None:
-    #summarySession += itemString % ("warning","Suspicious Properties:","normal","") + newLine
         for suspiciousProperty in suspiciousProperties:
             summarySession += itemString % ("base","","warning",str(suspiciousProperty)) + newLine
 
